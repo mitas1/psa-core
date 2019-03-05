@@ -8,7 +8,7 @@ diploma thesis of the author.
 
 Firstly, clone this repository to `${GOPATH}/src/github.com/mitas1/pps-core`. 
 
-Then, update `config.yaml` if needed. (see [Configuration](#configuration))
+Then, update `config.yaml` if needed (see [Configuration](#configuration)).
 
 To build the `psa-core` type the following:
 
