@@ -1,18 +1,26 @@
 package pdptw
 
-import "log"
+import (
+	"log"
+
+	"github.com/mitas1/psa-core/config"
+)
 
 // VNS - Variable Neighborhood Search
-func VNS(tsp *PDPTW, iterationMax, levelMax int) *Solution {
-	var s *Solution
+func VNS(tsp *PDPTW, config *config.Config) (s *Solution) {
+	iterationMax := config.VNS.IterMax
+	iteration := 0
 
+	// Preprocess incompatible arcs
 	tsp.preprocess()
 
-	iteration := 0
-	cons := Construction{}
+	// init structs
+	cons := NewCons(config.Construction)
+	opt := NewOptimization(config.Optimization, len(tsp.matrix))
 
 	// Generate feasible solution
 	best := cons.process(tsp)
+	return best
 
 	for iteration < iterationMax {
 		iteration++
@@ -29,8 +37,9 @@ func VNS(tsp *PDPTW, iterationMax, levelMax int) *Solution {
 
 		// s = sa.Process(s)
 
-		local2opt := Local2Opt{inc: make([]int, len(tsp.matrix))}
-		s = local2opt.Process(s)
+		s = opt.Process(s)
+
+		log.Print(s.IsFeasibleLog())
 
 		if s.MakeSpan() < best.MakeSpan() {
 			best = s

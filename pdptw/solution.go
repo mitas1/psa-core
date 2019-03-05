@@ -3,11 +3,19 @@ package pdptw
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"strings"
 
 	"github.com/mitas1/psa-core/utils"
+)
+
+type SetType int32
+
+const (
+	FEASIBLE_SET   SetType = 0
+	UNFEASIBLE_SET SetType = 1
 )
 
 // Solution struct
@@ -68,7 +76,7 @@ func (s *Solution) IsFeasible() bool {
 		}
 
 		if carrying > s.tsp.capacity {
-			//log.Print("CAPACITY OVERFLOW")
+			// log.Print("CAPACITY OVERFLOW")
 			return false
 		}
 
@@ -87,7 +95,7 @@ func (s *Solution) IsFeasible() bool {
 		}
 
 		if s.tsp.duedate[s.route[i]] != 0 && s.tsp.duedate[s.route[i]] < traveled {
-			//log.Print("TIME WINDOW OVERFLOW")
+			// log.Printf("%v TIME WINDOW OVERFLOW", i)
 			return false
 		}
 	}
@@ -158,7 +166,54 @@ func (s *Solution) Penalty() (penalty int) {
 
 	//log.Printf("|| %v %v %v", p_pd, p_tw, p_c)
 
-	penalty = 10*p_tw + p_pd + p_c
+	penalty = 100*p_tw + p_pd + p_c
+	return
+}
+
+func (s *Solution) getSet(setType SetType) (set []int) {
+	traveled := 0
+	carrying := 0
+	hasNode := false
+	tmp := false
+
+	for i := 1; i < len(s.route); i++ {
+		traveled += s.tsp.matrix[s.route[i-1]][s.route[i]]
+		carrying += s.tsp.demands[s.route[i-1]]
+		hasNode = false
+		tmp = false
+
+		// wait to ready to time
+		if traveled < s.tsp.readytime[s.route[i]] {
+			traveled = s.tsp.readytime[s.route[i]]
+		}
+
+		if val, ok := s.tsp.pred[s.route[i]]; ok {
+			for j := i; j < len(s.route); j++ {
+				if -val == s.route[j] {
+					hasNode = true
+					break
+				}
+			}
+			/* for j := i; j > 0; j-- {
+				if val == s.route[j] {
+					hasNode = true
+					break
+				}
+			} */
+			if !hasNode {
+				tmp = true
+			}
+		}
+
+		isFeasible := tmp || (s.tsp.duedate[s.route[i]] != 0 && s.tsp.duedate[s.route[i]] < traveled) || carrying > s.tsp.capacity
+
+		if setType == FEASIBLE_SET && isFeasible {
+			set = append(set, i)
+		} else if isFeasible {
+			set = append(set, i)
+		}
+	}
+
 	return
 }
 
@@ -203,24 +258,25 @@ func (s *Solution) calcSets() (feasible []int, unfeasible []int) {
 	return feasible, unfeasible
 }
 
+// exchange move node in position pos to new position newPos
+func (s *Solution) exchange(pos, newPos int) {
+	node := s.route[pos]
+	if newPos > pos {
+		for i := pos; i < newPos; i++ {
+			s.route[i] = s.route[i+1]
+		}
+	} else {
+		for i := pos; i > newPos; i-- {
+			s.route[i] = s.route[i-1]
+		}
+	}
+	s.route[newPos] = node
+}
+
 func (s *Solution) change(i, j int) {
 	aux := s.route[i]
 	s.route[i] = s.route[j]
 	s.route[j] = aux
-}
-
-func (s *Solution) exchange(p, paux int) {
-	n := s.route[p]
-	if paux > p {
-		for i := p; i < paux; i++ {
-			s.route[i] = s.route[i+1]
-		}
-	} else {
-		for i := p; i > paux; i-- {
-			s.route[i] = s.route[i-1]
-		}
-	}
-	s.route[paux] = n
 }
 
 func (s *Solution) HasNode(node int) bool {
@@ -278,4 +334,90 @@ func (s Solution) Copy() *Solution {
 	}
 
 	return &Solution{route: route, tsp: s.tsp}
+}
+
+//// ------- TESTING -----------------------------------------------------------
+
+// IsFeasible checks if solution is feasible
+func (s *Solution) IsFeasiblePrecendence() bool {
+	hasNode := false
+	traveled := 0
+	carrying := 0
+
+	for i := 1; i < s.tsp.numNodes; i++ {
+		hasNode = false
+		traveled += s.tsp.matrix[s.route[i-1]][s.route[i]]
+		carrying += s.tsp.demands[s.route[i-1]]
+
+		//log.Printf("%v - %v - %v", s.route[i-1], s.tsp.demands[s.route[i-1]], carrying)
+
+		// wait to ready to time
+		if traveled < s.tsp.readytime[s.route[i]] {
+			traveled = s.tsp.readytime[s.route[i]]
+		}
+
+		if value, ok := s.tsp.precendense[s.route[i]]; ok {
+			for j := i; j > 0; j-- {
+				if value == s.route[j] {
+					hasNode = true
+					break
+				}
+			}
+			if !hasNode {
+				// log.Printf("%v - %v", s.route[i], i)
+				// log.Print("PRECEDENCE OVERFLOW")
+				return false
+			}
+		}
+	}
+
+	// log.Printf("%v - %v - %v", carrying)
+	return true
+}
+
+// IsFeasible checks if solution is feasible
+func (s *Solution) IsFeasibleLog() bool {
+	hasNode := false
+	traveled := 0
+	carrying := 0
+
+	for i := 1; i < s.tsp.numNodes; i++ {
+		hasNode = false
+		traveled += s.tsp.matrix[s.route[i-1]][s.route[i]]
+		carrying += s.tsp.demands[s.route[i-1]]
+
+		//log.Printf("%v - %v - %v", s.route[i-1], s.tsp.demands[s.route[i-1]], carrying)
+
+		// wait to ready to time
+		if traveled < s.tsp.readytime[s.route[i]] {
+			traveled = s.tsp.readytime[s.route[i]]
+		}
+
+		if carrying > s.tsp.capacity {
+			log.Print("CAPACITY OVERFLOW")
+			return false
+		}
+
+		if value, ok := s.tsp.precendense[s.route[i]]; ok {
+			for j := i; j > 0; j-- {
+				if value == s.route[j] {
+					hasNode = true
+					break
+				}
+			}
+			if !hasNode {
+				// log.Printf("%v - %v", s.route[i], i)
+				log.Print("PRECEDENCE OVERFLOW")
+				return false
+			}
+		}
+
+		if s.tsp.duedate[s.route[i]] != 0 && s.tsp.duedate[s.route[i]] < traveled {
+			log.Printf("%v TIME WINDOW OVERFLOW", i)
+			return false
+		}
+	}
+
+	// log.Printf("%v - %v - %v", carrying)
+	return true
 }

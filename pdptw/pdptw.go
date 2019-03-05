@@ -28,6 +28,7 @@ type PDPTW struct {
 	demands     map[int]int
 	duedate     []int
 	precendense map[int]int
+	pred        map[int]int
 	arcs        map[int]map[int]bool
 }
 
@@ -50,6 +51,7 @@ func ReadFromFile(_path string, name string) *PDPTW {
 
 	tsp.matrix = make([][]int, 0)
 	tsp.precendense = make(map[int]int)
+	tsp.pred = make(map[int]int)
 	tsp.demands = make(map[int]int)
 
 	for scanner.Scan() {
@@ -72,6 +74,11 @@ func ReadFromFile(_path string, name string) *PDPTW {
 				tsp.matrix = append(tsp.matrix, elems)
 			} else {
 				tsp.precendense[elems[1]] = elems[0]
+
+				tsp.pred[elems[1]] = elems[0]
+
+				tsp.pred[elems[0]] = -elems[1]
+
 				tsp.demands[elems[0]] = elems[2]
 				tsp.demands[elems[1]] = -elems[2]
 				tsp.readytime[elems[0]] = elems[3]

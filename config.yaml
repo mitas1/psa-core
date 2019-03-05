@@ -1,0 +1,13 @@
+vns:
+  iterMax: 2
+  penaltyWeight:
+    timeWindow: 100
+    capacity: 1
+    pickupDelivery: 1
+construction:
+  strategy: greedy
+  levelMax: 30
+optimization:
+  strategy: cons2opt
+  iterMax: 10
+  levelMax: 10

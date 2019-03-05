@@ -1,24 +1,35 @@
 package pdptw
 
 import (
-	"log"
 	"math"
 	"math/rand"
 )
 
-func getMinIndex(array []int) int {
-	minIndex := 0
-	var min int = array[minIndex]
-	for index, value := range array {
-		if value < min {
-			min = value
-			minIndex = index
+// returns random solution
+type random struct{}
+
+func (random) getSolution(tsp *PDPTW) *Solution {
+	route := []int{tsp.startNode}
+	for i := 0; i < tsp.numNodes; i++ {
+		if i != tsp.startNode {
+			route = append(route, i)
 		}
 	}
-	return minIndex
+
+	for i := 1; i < len(route); i++ {
+		j := rand.Intn(i) + 1
+		route[i], route[j] = route[j], route[i]
+	}
+
+	s := NewSolution(tsp, route)
+
+	return &s
 }
 
-func Greedy(tsp *PDPTW) *Solution {
+// returns solution constructed by nearest neighborhood heuristic
+type greedy struct{}
+
+func (greedy) getSolution(tsp *PDPTW) *Solution {
 	best := NewSolution(tsp, []int{0})
 	for i := 0; i < tsp.numNodes-1; i++ {
 		current := best.GetNode(i)
@@ -38,27 +49,6 @@ func Greedy(tsp *PDPTW) *Solution {
 	return &best
 }
 
-func GetRandom(tsp *PDPTW) *Solution {
-	//log.Printf("Start node: %v", tsp.startNode)
-	route := []int{tsp.startNode}
-	for i := 0; i < tsp.numNodes; i++ {
-		if i != tsp.startNode {
-			route = append(route, i)
-		}
-	}
-
-	for i := 1; i < len(route); i++ {
-		j := rand.Intn(i) + 1
-		route[i], route[j] = route[j], route[i]
-	}
-
-	// log.Printf("%v", route)
-
-	s := NewSolution(tsp, route)
-
-	return &s
-}
-
 func GetRandomPD(tsp *PDPTW) *Solution {
 	r1 := []int{0}
 	r2 := []int{}
@@ -68,7 +58,6 @@ func GetRandomPD(tsp *PDPTW) *Solution {
 	for i := 0; i < tsp.numNodes; i++ {
 		if value, ok := tsp.precendense[i]; ok {
 			r1 = append(r1, value)
-			log.Print(value)
 			r2 = append(r2, i)
 			tmp[i] = true
 			tmp[tsp.precendense[i]] = true
@@ -94,8 +83,6 @@ func GetRandomPD(tsp *PDPTW) *Solution {
 	r1 = append(r1, r2...)
 
 	s := NewSolution(tsp, r1)
-
-	s.Print()
 
 	return &s
 }

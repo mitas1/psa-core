@@ -2,28 +2,60 @@ package pdptw
 
 import (
 	"math/rand"
+
+	"github.com/mitas1/psa-core/config"
 )
 
-type Construction struct{}
+// Direction for shifting
+type Direction int32
+
+// FORWARD AND BACKWARD direction
+const (
+	FORWARD  Direction = 0
+	BACKWARD Direction = 1
+)
+
+type constructionStrategy interface {
+	getSolution(tsp *PDPTW) *Solution
+}
+
+// Construction struct
+type Construction struct {
+	levelMax int
+	strategy constructionStrategy
+}
+
+func NewCons(opts config.Construction) *Construction {
+	var strategy constructionStrategy
+
+	switch opts.Strategy {
+	case "random":
+		strategy = random{}
+	case "greedy":
+		strategy = greedy{}
+	default:
+		strategy = random{}
+	}
+
+	return &Construction{levelMax: opts.LevelMax, strategy: strategy}
+}
 
 func (c *Construction) process(tsp *PDPTW) *Solution {
 	level := 1
-	levelMax := 25
 
-	// generate random solution
-	x := GetRandom(tsp)
+	// generate first solution, using configured strategy
+	x := c.strategy.getSolution(tsp)
 
-	c.local1shift(x)
+	// c.localSearch(x)
 
 	for !x.IsFeasible() {
 		x2 := c.disturb(x, level)
 
-		/* local2opt := Local2Opt{inc: make([]int, len(tsp.matrix))}
-		x2 = local2opt.Process(x2) */
+		c.localSearch(x2)
 
-		x2 = c.local1shift(x2)
-
-		//log.Printf("%v - %v", x2.Penalty(), x2.IsFeasible())
+		if x2.IsFeasible() {
+			return x2
+		}
 
 		if x2.Penalty() < x.Penalty() {
 			for i := 1; i < len(x.route); i++ {
@@ -38,9 +70,9 @@ func (c *Construction) process(tsp *PDPTW) *Solution {
 		} else {
 			level++
 
-			if levelMax < level {
+			if c.levelMax < level {
 				level = 1
-				x = GetRandom(tsp)
+				x = c.strategy.getSolution(tsp)
 			}
 		}
 	}
@@ -48,157 +80,49 @@ func (c *Construction) process(tsp *PDPTW) *Solution {
 	return x
 }
 
-func (*Construction) local1shift(s *Solution) *Solution {
-	penalty := s.Penalty()
+func (c *Construction) localSearch(s *Solution) {
+	penalty := 1
 
-	feasibleSet, unfeasibleSet := s.calcSets()
-	unfeasibleSize := len(unfeasibleSet)
-	feasibleSize := len(feasibleSet)
+	// variables represent whether the improvement was found
+	i1, i2, i3, i4 := true, true, true, true
 
+	// break only if no shifting found improvement or penalty is 0
+	for i1 || i2 || i3 || i4 {
+		if penalty, i1 = c.shifting(s, BACKWARD, UNFEASIBLE_SET); penalty == 0 {
+			break
+		}
+		if penalty, i2 = c.shifting(s, FORWARD, FEASIBLE_SET); penalty == 0 {
+			break
+		}
+		if penalty, i3 = c.shifting(s, FORWARD, UNFEASIBLE_SET); penalty == 0 {
+			break
+		}
+		if penalty, i4 = c.shifting(s, BACKWARD, FEASIBLE_SET); penalty == 0 {
+			break
+		}
+	}
+	return
+}
+
+func (*Construction) shifting(s *Solution, direction Direction, setType SetType) (penalty int, improved bool) {
+	// get feasible or unfeasible set
+	set := s.getSet(setType)
+	// calculate penalty
+	penalty = s.Penalty()
+	// set pointer to set length
+	pointer := len(set)
 	improvement := false
 
-	for penalty > 0 && (unfeasibleSize > 0 || feasibleSize > 0) {
+	for pointer > 0 {
+		// select random node within set
+		pos := rand.Intn(pointer)
+		npos := set[pos]
+		n := s.route[npos]
 
-		feasibleSet, unfeasibleSet = s.calcSets()
-		unfeasibleSize = len(unfeasibleSet)
-		feasibleSize = len(feasibleSet)
+		improvement = false
 
-		//ufAuxSize := unfeasibleSize
-		//fAuxSize := feasibleSize
-
-		for unfeasibleSize > 0 {
-			pos := rand.Intn(len(unfeasibleSet))
-			npos := unfeasibleSet[pos]
-			//n := s.route[npos]
-
-			improvement = false
-
-			for i := npos - 1; i > 0; i-- {
-				/* if !s.tsp.arcs[n][s.route[i]] {
-					break
-				} */
-
-				s.exchange(npos, i)
-
-				penaltyAux := s.Penalty()
-
-				if penaltyAux < penalty {
-					penalty = penaltyAux
-					improvement = true
-					break
-				} else {
-					s.exchange(i, npos)
-				}
-			}
-
-			if improvement {
-				if penalty == 0 {
-					return s
-				}
-
-				feasibleSet, unfeasibleSet = s.calcSets()
-				unfeasibleSize = len(unfeasibleSet)
-				feasibleSize = len(feasibleSet)
-			} else {
-				unfeasibleSize--
-				aux := unfeasibleSet[pos]
-				unfeasibleSet[pos] = unfeasibleSet[unfeasibleSize]
-				unfeasibleSet[unfeasibleSize] = aux
-			}
-
-		}
-
-		for feasibleSize > 0 {
-			pos := rand.Intn(len(feasibleSet))
-			npos := feasibleSet[pos]
-			n := s.route[npos]
-
-			improvement = false
-
-			for i := npos + 1; i < s.tsp.numNodes-1; i++ {
-				if !s.tsp.arcs[s.route[i]][n] {
-					break
-				}
-
-				s.exchange(npos, i)
-
-				penaltyAux := s.Penalty()
-
-				if penaltyAux < penalty {
-					penalty = penaltyAux
-					improvement = true
-					break
-				} else {
-					s.exchange(i, npos)
-				}
-			}
-
-			if improvement {
-				if penalty == 0 {
-					return s
-				}
-				feasibleSet, unfeasibleSet = s.calcSets()
-				unfeasibleSize = len(unfeasibleSet)
-				feasibleSize = len(feasibleSet)
-			} else {
-				feasibleSize--
-				aux := feasibleSet[pos]
-				feasibleSet[pos] = feasibleSet[feasibleSize]
-				feasibleSet[feasibleSize] = aux
-			}
-		}
-
-		//feasibleSize = fAuxSize
-		// unfeasibleSize = ufAuxSize
-
-		for unfeasibleSize > 0 {
-			pos := rand.Intn(unfeasibleSize)
-			npos := unfeasibleSet[pos]
-			n := s.route[npos]
-
-			improvement = false
-
-			for i := npos + 1; i < len(s.route)-1; i++ {
-				if !s.tsp.arcs[s.route[i]][n] {
-					break
-				}
-
-				s.exchange(npos, i)
-
-				penaltyAux := s.Penalty()
-
-				if penaltyAux < penalty {
-					penalty = penaltyAux
-					improvement = true
-					break
-				} else {
-					s.exchange(i, npos)
-				}
-			}
-
-			if improvement {
-				if penalty == 0 {
-					return s
-				}
-
-				feasibleSet, unfeasibleSet = s.calcSets()
-				unfeasibleSize = len(unfeasibleSet)
-				feasibleSize = len(feasibleSet)
-			} else {
-				unfeasibleSize--
-				aux := unfeasibleSet[pos]
-				unfeasibleSet[pos] = unfeasibleSet[unfeasibleSize]
-				unfeasibleSet[unfeasibleSize] = aux
-			}
-		}
-
-		for feasibleSize > 0 {
-			pos := rand.Intn(len(feasibleSet))
-			npos := feasibleSet[pos]
-			n := s.route[npos]
-
-			improvement = false
-
+		// TODO: Rewrite needed, merge this code
+		if direction == BACKWARD {
 			for i := npos - 1; i > 0; i-- {
 				if !s.tsp.arcs[n][s.route[i]] {
 					break
@@ -216,33 +140,47 @@ func (*Construction) local1shift(s *Solution) *Solution {
 					s.exchange(i, npos)
 				}
 			}
-
-			if improvement {
-				if penalty == 0 {
-					return s
+		} else {
+			for i := npos + 1; i < len(s.route)-1; i++ {
+				if !s.tsp.arcs[s.route[i]][n] {
+					break
 				}
-				feasibleSet, unfeasibleSet = s.calcSets()
-				unfeasibleSize = len(unfeasibleSet)
-				feasibleSize = len(feasibleSet)
-			} else {
-				feasibleSize--
-				aux := feasibleSet[pos]
-				feasibleSet[pos] = feasibleSet[feasibleSize]
-				feasibleSet[feasibleSize] = aux
+
+				s.exchange(npos, i)
+
+				penaltyAux := s.Penalty()
+
+				if penaltyAux < penalty {
+					penalty = penaltyAux
+					improvement = true
+					break
+				} else {
+					s.exchange(i, npos)
+				}
 			}
 		}
-	}
-	return s
-}
-func indexOf(element int, data []int) int {
-	for k, v := range data {
-		if element == v {
-			return k
+
+		if improvement {
+			if penalty == 0 {
+				return
+			}
+			// reset after improvement
+			set = s.getSet(setType)
+			pointer = len(set)
+			// improvement found
+			improved = true
+		} else {
+			pointer--
+			// move selected node to end
+			aux := set[pos]
+			set[pos] = set[pointer]
+			set[pointer] = aux
 		}
 	}
-	return -1 //not found.
+	return
 }
 
+// TODO: rewrite needed
 func (*Construction) disturb(s *Solution, level int) *Solution {
 	newSolution := NewSolution(s.tsp, s.route)
 
