@@ -17,6 +17,12 @@ type Config struct {
 type Construction struct {
 	Strategy string
 	LevelMax int
+	Penalty  Penalty
+}
+type Penalty struct {
+	TimeWindows    int
+	PickupDelivery int
+	Capacity       int
 }
 
 type VNS struct {

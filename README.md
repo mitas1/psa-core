@@ -38,6 +38,9 @@ This table describes available configuration options:
 | `construction.strategy`  | Strategy used to create the first posibly unfeasible solution. Available choices are `random`, `greedy`, `sortedByDuedate` and `sortedByTW` |
 | `construction.levelMax`  | Maximum level of perturbation in constraction part               |
 | `construction.iterMax`   | Maximum iteretion in construction part                           |
+| `construction.penalty.timeWindows`    | Weight of time windows penalty                         |
+| `construction.penalty.pickupDelivery`    | Weight of pickup and delivery penalty                         |
+| `construction.penalty.capacity`    | Weight of capacity penalty                         |
 | `optimization.strategy`  | Strategy used in optimization part. Available choices are  `2opt` and  `lexical2opt` |
 | `optimization.levelMax`  | Maximum level of perturbation in optimization part                 |
 | `optimization.iterMax`  | Maximum iteretion in optimization part                              |
