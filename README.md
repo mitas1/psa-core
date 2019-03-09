@@ -53,8 +53,8 @@ vns:
 construction:
   strategy: random
   levelMax: 10
-  penaltyWeight:
-    timeWindow: 100
+  penalty:
+    timeWindows: 100
     capacity: 1
     pickupDelivery: 1
 optimization:
