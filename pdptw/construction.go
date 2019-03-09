@@ -23,6 +23,7 @@ type constructionStrategy interface {
 type Construction struct {
 	levelMax int
 	strategy constructionStrategy
+	penalty  config.Penalty
 }
 
 func NewCons(opts config.Construction) *Construction {
@@ -41,7 +42,7 @@ func NewCons(opts config.Construction) *Construction {
 		strategy = random{}
 	}
 
-	return &Construction{levelMax: opts.LevelMax, strategy: strategy}
+	return &Construction{levelMax: opts.LevelMax, strategy: strategy, penalty: opts.Penalty}
 }
 
 func (c *Construction) process(tsp *PDPTW) *Solution {
@@ -61,14 +62,14 @@ func (c *Construction) process(tsp *PDPTW) *Solution {
 			return x2
 		}
 
-		if x2.Penalty() < x.Penalty() {
+		if c.Penalty(x2) < c.Penalty(x) {
 			for i := 1; i < len(x.route); i++ {
 				x.route[i] = x2.route[i]
 			}
 
 			level = 1
 
-			if x.Penalty() == 0 {
+			if c.Penalty(x) == 0 {
 				return x
 			}
 		} else {
@@ -108,11 +109,11 @@ func (c *Construction) localSearch(s *Solution) {
 	return
 }
 
-func (*Construction) shifting(s *Solution, direction Direction, setType SetType) (penalty int, improved bool) {
+func (c *Construction) shifting(s *Solution, direction Direction, setType SetType) (penalty int, improved bool) {
 	// get feasible or unfeasible set
 	set := s.getSet(setType)
 	// calculate penalty
-	penalty = s.Penalty()
+	penalty = c.Penalty(s)
 	// set pointer to set length
 	pointer := len(set)
 	improvement := false
@@ -134,7 +135,7 @@ func (*Construction) shifting(s *Solution, direction Direction, setType SetType)
 
 				s.exchange(npos, i)
 
-				penaltyAux := s.Penalty()
+				penaltyAux := c.Penalty(s)
 
 				if penaltyAux < penalty {
 					penalty = penaltyAux
@@ -152,7 +153,7 @@ func (*Construction) shifting(s *Solution, direction Direction, setType SetType)
 
 				s.exchange(npos, i)
 
-				penaltyAux := s.Penalty()
+				penaltyAux := c.Penalty(s)
 
 				if penaltyAux < penalty {
 					penalty = penaltyAux
@@ -199,4 +200,70 @@ func (*Construction) disturb(s *Solution, level int) *Solution {
 		}
 	}
 	return &newSolution
+}
+
+// Penalty is sum of all differences between the time to reach each customer
+// and its due date
+func (c Construction) Penalty(s *Solution) (penalty int) {
+	traveled := 0
+	hasNode := false
+	carrying := 0
+
+	p_tw := 0
+	p_pd := 0
+	p_c := 0
+
+	for i := 1; i < len(s.route); i++ {
+
+		hasNode = false
+		traveled += s.tsp.matrix[s.route[i-1]][s.route[i]]
+		carrying += s.tsp.demands[s.route[i-1]]
+
+		// wait to ready to time
+		if traveled < s.tsp.readytime[s.route[i]] {
+			traveled = s.tsp.readytime[s.route[i]]
+		}
+
+		if carrying > s.tsp.capacity {
+			// log.Printf("penalty: %v - %v - %v -> %v", p_c, carrying, s.tsp.capacity, carrying-s.tsp.capacity)
+			p_c = p_c + (carrying - s.tsp.capacity)
+		}
+
+		if value, ok := s.tsp.precendense[s.route[i]]; ok {
+			for j := i; j > 0; j-- {
+				if value == s.route[j] {
+					hasNode = true
+					break
+				}
+			}
+			if !hasNode {
+				for j := i; j < s.tsp.numNodes; j++ {
+					if value == s.route[j] {
+						//log.Printf("%v fucking constraint", value)
+						p_pd = p_pd + j
+						break
+					}
+				}
+			}
+		}
+
+		if s.tsp.duedate[s.route[i]] != 0 && s.tsp.duedate[s.route[i]] < traveled || s.tsp.readytime[s.route[i]] > traveled {
+			p_tw = p_tw + traveled - s.tsp.duedate[s.route[i]]
+		}
+	}
+
+	/* if p_tw == 0 {
+		log.Printf("|| %v %v %v", p_pd, p_tw, p_c)
+		_, un := s.calcSets()
+		tmp := []int{}
+		for i := 0; i < len(un); i++ {
+			tmp = append(tmp, un[i])
+		}
+		log.Printf("%v", tmp)
+	} */
+
+	//log.Printf("|| %v %v %v", p_pd, p_tw, p_c)
+
+	penalty = c.penalty.TimeWindows*p_tw + c.penalty.PickupDelivery*p_pd + c.penalty.Capacity*p_c
+	return
 }
