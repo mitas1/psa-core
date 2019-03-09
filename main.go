@@ -42,7 +42,9 @@ func runAll(instancesPath, solutionsPath string, config *config.Config) {
 		tsp := pdptw.ReadFromFile(instancesPath, file.Name())
 		start := time.Now()
 		s := pdptw.VNS(tsp, config)
-		res += fmt.Sprintf("%v	&	%v	&	%v	&	%v	&	%v\n", file.Name(), s.MakeSpan(), s.TotalDistance(), time.Since(start), s.IsFeasible())
+		duration := time.Since(start)
+		res += fmt.Sprintf("%v	&	%v	&	%v	&	%.4f\n", file.Name(), s.MakeSpan(),
+			s.TotalDistance(), duration.Seconds())
 		log.Print(res)
 		s.WriteToFile(solutionsPath, file.Name())
 	}
@@ -70,7 +72,7 @@ func main() {
 	//instanceName := ""
 
 	if instancesPath == "" {
-		instancesPath = "_instances/wan-rong-jih/psa"
+		instancesPath = "_instances/hosny/psa"
 	}
 
 	runAll(instancesPath, SOLUTION_PATH, &c)
@@ -78,7 +80,9 @@ func main() {
 
 	log.Printf("Solving: %s", "a.psa")
 
-	tsp := pdptw.ReadFromFile(instancesPath, "a.psa")
+	tsp := pdptw.ReadFromFile(instancesPath, "01.psa")
+
+	fmt.Printf("%#v", tsp)
 
 	s := pdptw.VNS(tsp, &c)
 	s.Print()

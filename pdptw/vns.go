@@ -39,8 +39,6 @@ func VNS(tsp *PDPTW, config *config.Config) (s *Solution) {
 
 		s = opt.Process(s)
 
-		log.Print(s.IsFeasibleLog())
-
 		if s.MakeSpan() < best.MakeSpan() {
 			best = s
 			log.Print(s.MakeSpan())

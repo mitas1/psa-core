@@ -5,7 +5,7 @@ vns:
     capacity: 1
     pickupDelivery: 1
 construction:
-  strategy: greedy
+  strategy: sortByTW
   levelMax: 30
 optimization:
   strategy: cons2opt

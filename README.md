@@ -35,7 +35,7 @@ This table describes available configuration options:
 | Name             | Description                                                             |
 | ---------------- | ----------------------------------------------------------------------- |
 | `vns.iterMax`    | Maximum iteretion of the overall VNS                                    |
-| `construction.initStrategy`  | Strategy used to create the first posibly unfeasible solution. Available choices are `random` and `greedy` |
+| `construction.strategy`  | Strategy used to create the first posibly unfeasible solution. Available choices are `random`, `greedy`, `sortedByDuedate` and `sortedByTW` |
 | `construction.levelMax`  | Maximum level of perturbation in constraction part               |
 | `construction.iterMax`   | Maximum iteretion in construction part                           |
 | `optimization.strategy`  | Strategy used in optimization part. Available choices are  `2opt` and  `lexical2opt` |
