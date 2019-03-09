@@ -3,11 +3,12 @@ package pdptw
 import (
 	"math"
 	"math/rand"
+	"sort"
 )
 
-// returns random solution
 type random struct{}
 
+// generate random solution
 func (random) getSolution(tsp *PDPTW) *Solution {
 	route := []int{tsp.startNode}
 	for i := 0; i < tsp.numNodes; i++ {
@@ -26,9 +27,9 @@ func (random) getSolution(tsp *PDPTW) *Solution {
 	return &s
 }
 
-// returns solution constructed by nearest neighborhood heuristic
 type greedy struct{}
 
+// returns solution constructed by nearest neighborhood heuristic
 func (greedy) getSolution(tsp *PDPTW) *Solution {
 	best := NewSolution(tsp, []int{0})
 	for i := 0; i < tsp.numNodes-1; i++ {
@@ -47,6 +48,50 @@ func (greedy) getSolution(tsp *PDPTW) *Solution {
 	}
 	best.AddNode(0)
 	return &best
+}
+
+type sortByDuedate struct{}
+
+func (sortByDuedate) getSolution(tsp *PDPTW) *Solution {
+	var route []int
+
+	for i := 0; i < tsp.numNodes; i++ {
+		if i != tsp.startNode {
+			route = append(route, i)
+		}
+	}
+
+	// sort by duedate
+	sort.Slice(route, func(i, j int) bool {
+		return tsp.duedate[route[i]] < tsp.duedate[route[j]]
+	})
+
+	s := NewSolution(tsp, append([]int{tsp.startNode}, route...))
+
+	return &s
+}
+
+type sortByTW struct{}
+
+func (sortByTW) getSolution(tsp *PDPTW) *Solution {
+	route := []int{}
+
+	median := make(map[int]int)
+
+	for i := 0; i < tsp.numNodes; i++ {
+		if i != tsp.startNode {
+			route = append(route, i)
+			median[i] = tsp.duedate[i] - ((tsp.duedate[i] - tsp.readytime[i]) / 2)
+		}
+	}
+
+	sort.Slice(route, func(i, j int) bool {
+		return median[route[i]] < median[route[j]]
+	})
+
+	s := NewSolution(tsp, append([]int{tsp.startNode}, route...))
+
+	return &s
 }
 
 func GetRandomPD(tsp *PDPTW) *Solution {

@@ -33,6 +33,10 @@ func NewCons(opts config.Construction) *Construction {
 		strategy = random{}
 	case "greedy":
 		strategy = greedy{}
+	case "sortByDuedate":
+		strategy = sortByDuedate{}
+	case "sortByTW":
+		strategy = sortByTW{}
 	default:
 		strategy = random{}
 	}
