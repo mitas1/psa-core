@@ -110,6 +110,7 @@ func (c *Construction) localSearch(s *Solution) {
 }
 
 func (c *Construction) shifting(s *Solution, direction Direction, setType SetType) (penalty int, improved bool) {
+	var newPenalty int
 	// get feasible or unfeasible set
 	set := s.getSet(setType)
 	// calculate penalty
@@ -135,15 +136,13 @@ func (c *Construction) shifting(s *Solution, direction Direction, setType SetTyp
 
 				s.exchange(npos, i)
 
-				penaltyAux := c.Penalty(s)
+				newPenalty = c.Penalty(s)
 
-				if penaltyAux < penalty {
-					penalty = penaltyAux
+				if newPenalty < penalty {
 					improvement = true
 					break
-				} else {
-					s.exchange(i, npos)
 				}
+				s.exchange(i, npos)
 			}
 		} else {
 			for i := npos + 1; i < len(s.route)-1; i++ {
@@ -153,22 +152,21 @@ func (c *Construction) shifting(s *Solution, direction Direction, setType SetTyp
 
 				s.exchange(npos, i)
 
-				penaltyAux := c.Penalty(s)
+				newPenalty = c.Penalty(s)
 
-				if penaltyAux < penalty {
-					penalty = penaltyAux
+				if newPenalty < penalty {
 					improvement = true
 					break
-				} else {
-					s.exchange(i, npos)
 				}
+				s.exchange(i, npos)
 			}
 		}
 
 		if improvement {
-			if penalty == 0 {
+			if newPenalty == 0 {
 				return
 			}
+			penalty = newPenalty
 			// reset after improvement
 			set = s.getSet(setType)
 			pointer = len(set)
@@ -177,29 +175,22 @@ func (c *Construction) shifting(s *Solution, direction Direction, setType SetTyp
 		} else {
 			pointer--
 			// move selected node to end
-			aux := set[pos]
-			set[pos] = set[pointer]
-			set[pointer] = aux
+			set[pos], set[pointer] = set[pointer], set[pos]
 		}
 	}
 	return
 }
 
-// TODO: rewrite needed
 func (*Construction) disturb(s *Solution, level int) *Solution {
-	newSolution := NewSolution(s.tsp, s.route)
+	var n1, n2 int
+	newSolution := s.Copy()
 
-	feasibleSet, unfeasibleSet := s.calcSets()
-
-	feasibleSize, unfeasibleSize := len(feasibleSet), len(unfeasibleSet)
-
-	for i := 0; i <= level; i++ {
-		if feasibleSize > 0 && unfeasibleSize > 0 {
-			newSolution.exchange(feasibleSet[rand.Intn(feasibleSize)],
-				unfeasibleSet[rand.Intn(unfeasibleSize)])
-		}
+	for i := 0; i < level; i++ {
+		n1 = rand.Intn(len(s.route))
+		n2 = rand.Intn(len(s.route))
+		newSolution.exchange(n1, n2)
 	}
-	return &newSolution
+	return newSolution
 }
 
 // Penalty is sum of all differences between the time to reach each customer
@@ -225,7 +216,6 @@ func (c Construction) Penalty(s *Solution) (penalty int) {
 		}
 
 		if carrying > s.tsp.capacity {
-			// log.Printf("penalty: %v - %v - %v -> %v", p_c, carrying, s.tsp.capacity, carrying-s.tsp.capacity)
 			p_c = p_c + (carrying - s.tsp.capacity)
 		}
 
@@ -239,7 +229,6 @@ func (c Construction) Penalty(s *Solution) (penalty int) {
 			if !hasNode {
 				for j := i; j < s.tsp.numNodes; j++ {
 					if value == s.route[j] {
-						//log.Printf("%v fucking constraint", value)
 						p_pd = p_pd + j
 						break
 					}
@@ -251,18 +240,6 @@ func (c Construction) Penalty(s *Solution) (penalty int) {
 			p_tw = p_tw + traveled - s.tsp.duedate[s.route[i]]
 		}
 	}
-
-	/* if p_tw == 0 {
-		log.Printf("|| %v %v %v", p_pd, p_tw, p_c)
-		_, un := s.calcSets()
-		tmp := []int{}
-		for i := 0; i < len(un); i++ {
-			tmp = append(tmp, un[i])
-		}
-		log.Printf("%v", tmp)
-	} */
-
-	//log.Printf("|| %v %v %v", p_pd, p_tw, p_c)
 
 	penalty = c.penalty.TimeWindows*p_tw + c.penalty.PickupDelivery*p_pd + c.penalty.Capacity*p_c
 	return
