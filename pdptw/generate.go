@@ -27,29 +27,6 @@ func (random) getSolution(tsp *PDPTW) *Solution {
 	return &s
 }
 
-type greedy struct{}
-
-// returns solution constructed by nearest neighborhood heuristic
-func (greedy) getSolution(tsp *PDPTW) *Solution {
-	best := NewSolution(tsp, []int{0})
-	for i := 0; i < tsp.numNodes-1; i++ {
-		current := best.GetNode(i)
-		minIndex := 0
-		var min = math.MaxInt64
-
-		for index, value := range tsp.matrix[current] {
-			if !best.HasNode(index) && value < min {
-				min = value
-				minIndex = index
-			}
-		}
-
-		best.AddNode(minIndex)
-	}
-	best.AddNode(0)
-	return &best
-}
-
 type sortByDuedate struct{}
 
 func (sortByDuedate) getSolution(tsp *PDPTW) *Solution {
@@ -85,6 +62,7 @@ func (sortByTW) getSolution(tsp *PDPTW) *Solution {
 		}
 	}
 
+	// sort by median
 	sort.Slice(route, func(i, j int) bool {
 		return median[route[i]] < median[route[j]]
 	})
@@ -92,6 +70,29 @@ func (sortByTW) getSolution(tsp *PDPTW) *Solution {
 	s := NewSolution(tsp, append([]int{tsp.startNode}, route...))
 
 	return &s
+}
+
+type greedy struct{}
+
+// returns solution constructed by nearest neighborhood heuristic
+func (greedy) getSolution(tsp *PDPTW) *Solution {
+	best := NewSolution(tsp, []int{0})
+	for i := 0; i < tsp.numNodes-1; i++ {
+		current := best.GetNode(i)
+		minIndex := 0
+		var min = math.MaxInt64
+
+		for index, value := range tsp.matrix[current] {
+			if !best.HasNode(index) && value < min {
+				min = value
+				minIndex = index
+			}
+		}
+
+		best.AddNode(minIndex)
+	}
+	best.AddNode(0)
+	return &best
 }
 
 func GetRandomPD(tsp *PDPTW) *Solution {
