@@ -18,6 +18,10 @@ type TSP interface {
 	preprocess()
 }
 
+func CreateInstance() PDPTW {
+	return PDPTW{}
+}
+
 type PDPTW struct {
 	name        string
 	startNode   int

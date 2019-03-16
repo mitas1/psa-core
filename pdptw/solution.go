@@ -151,47 +151,6 @@ func (s *Solution) getSet(setType SetType) (set []int) {
 	return
 }
 
-func (s *Solution) calcSets() (feasible []int, unfeasible []int) {
-	traveled := 0
-	carrying := 0
-	hasNode := false
-	tmp := false
-
-	for i := 1; i < len(s.route); i++ {
-		traveled += s.tsp.matrix[s.route[i-1]][s.route[i]]
-		carrying += s.tsp.demands[s.route[i-1]]
-		hasNode = false
-		tmp = false
-
-		// wait to ready to time
-		if traveled < s.tsp.readytime[s.route[i]] {
-			traveled = s.tsp.readytime[s.route[i]]
-		}
-
-		if val, ok := s.tsp.precendense[s.route[i]]; ok {
-			for j := i; j > 0; j-- {
-				if val == s.route[j] {
-					hasNode = true
-					break
-				}
-			}
-			if !hasNode {
-				tmp = true
-			}
-		}
-
-		if tmp || (s.tsp.duedate[s.route[i]] != 0 && s.tsp.duedate[s.route[i]] < traveled) || carrying > s.tsp.capacity {
-			unfeasible = append(unfeasible, i)
-		} else {
-			feasible = append(feasible, i)
-		}
-	}
-
-	//log.Printf("%v - %v", unfeasible, feasible)
-
-	return feasible, unfeasible
-}
-
 // exchange move node in position pos to new position newPos
 func (s *Solution) exchange(pos, newPos int) {
 	node := s.route[pos]
@@ -208,9 +167,7 @@ func (s *Solution) exchange(pos, newPos int) {
 }
 
 func (s *Solution) change(i, j int) {
-	aux := s.route[i]
-	s.route[i] = s.route[j]
-	s.route[j] = aux
+	s.route[i], s.route[j] = s.route[j], s.route[i]
 }
 
 func (s *Solution) HasNode(node int) bool {
@@ -248,13 +205,11 @@ func (s *Solution) TotalDistance() int {
 
 func (s *Solution) MakeSpan() int {
 	traveled := 0
-	for i := 1; i < len(s.route); i++ {
-		traveled += s.tsp.matrix[s.route[i-1]][s.route[i]]
-
+	for i := 0; i < len(s.route)-1; i++ {
 		if traveled < s.tsp.readytime[s.route[i]] {
 			traveled = s.tsp.readytime[s.route[i]]
 		}
-
+		traveled += s.tsp.matrix[s.route[i]][s.route[i+1]]
 	}
 	return traveled
 }
@@ -268,6 +223,41 @@ func (s Solution) Copy() *Solution {
 	}
 
 	return &Solution{route: route, tsp: s.tsp}
+}
+
+func (s Solution) disturb(level int) (x *Solution) {
+	for j := 0; j < level; j++ {
+
+		n1 := utils.Random(0, len(s.route)-2)
+		n2 := utils.Random(n1+2, len(s.route))
+
+		x = s.kExchange(n1, n2)
+	}
+	return x
+}
+
+func (s *Solution) kExchange(iaux, jaux int) *Solution {
+	if iaux > jaux {
+		return s
+	}
+	start := iaux + 1 // start = n1 +1
+	end := jaux       // end = n3
+
+	x := s.Copy()
+	j := 0
+
+	// median
+	median := (end-start+1)/2 + start - 1
+
+	for i := start; i <= median; i++ {
+		j = end - (i - start)
+		x.route[i], x.route[j] = x.route[j], x.route[i]
+	}
+
+	if x.IsFeasible() {
+		return x
+	}
+	return s
 }
 
 //// ------- TESTING -----------------------------------------------------------

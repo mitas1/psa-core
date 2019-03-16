@@ -196,8 +196,10 @@ func (*Construction) disturb(s *Solution, level int) *Solution {
 // Penalty is sum of all differences between the time to reach each customer
 // and its due date
 func (c Construction) Penalty(s *Solution) (penalty int) {
+	// resume here
 	traveled := 0
 	hasNode := false
+	// resume here
 	carrying := 0
 
 	p_tw := 0
@@ -236,7 +238,8 @@ func (c Construction) Penalty(s *Solution) (penalty int) {
 			}
 		}
 
-		if s.tsp.duedate[s.route[i]] != 0 && s.tsp.duedate[s.route[i]] < traveled || s.tsp.readytime[s.route[i]] > traveled {
+		if s.tsp.duedate[s.route[i]] != 0 && s.tsp.duedate[s.route[i]] < traveled ||
+			s.tsp.readytime[s.route[i]] > traveled {
 			p_tw = p_tw + traveled - s.tsp.duedate[s.route[i]]
 		}
 	}

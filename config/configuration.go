@@ -30,9 +30,11 @@ type VNS struct {
 }
 
 type Optimization struct {
-	Strategy string
-	IterMax  int
-	LevelMax int
+	Strategy  string
+	Objective string
+	IterMax   int
+	LevelMax  int
+	Asymetric bool
 }
 
 // LoadConfig loads configuration file

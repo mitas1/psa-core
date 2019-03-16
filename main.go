@@ -43,9 +43,10 @@ func runAll(instancesPath, solutionsPath string, config *config.Config) {
 		start := time.Now()
 		s := pdptw.VNS(tsp, config)
 		duration := time.Since(start)
-		res += fmt.Sprintf("%v	&	%v	&	%v	&	%.4f\n", file.Name(), s.MakeSpan(),
-			s.TotalDistance(), duration.Seconds())
-		log.Print(res)
+		line := fmt.Sprintf("%v	&	%v	&	%v	&	%.4f	%v\n", file.Name(), s.MakeSpan(),
+			s.TotalDistance(), duration.Seconds(), s.IsFeasibleLog())
+		res += line
+		fmt.Print(line)
 		s.WriteToFile(solutionsPath, file.Name())
 	}
 	log.Print(res)
