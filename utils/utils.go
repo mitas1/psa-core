@@ -1,5 +1,7 @@
 package utils
 
+import "math/rand"
+
 // Map function to array of ints
 func Map(vs []string, f func(string) int) []int {
 	vsm := make([]int, len(vs))
@@ -28,4 +30,8 @@ func Equal(a, b []int) bool {
 		}
 	}
 	return true
+}
+
+func Random(min, max int) int {
+	return rand.Intn(max-min) + min
 }

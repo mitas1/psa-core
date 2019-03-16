@@ -1,13 +1,17 @@
 package pdptw
 
 import (
-	"log"
+	"math/rand"
+	"time"
 
 	"github.com/mitas1/psa-core/config"
 )
 
 // VNS - Variable Neighborhood Search
 func VNS(tsp *PDPTW, config *config.Config) (s *Solution) {
+	// set random seed
+	rand.Seed(time.Now().UnixNano())
+
 	iterationMax := config.VNS.IterMax
 	iteration := 0
 
@@ -16,11 +20,11 @@ func VNS(tsp *PDPTW, config *config.Config) (s *Solution) {
 
 	// init structs
 	cons := NewCons(config.Construction)
+
 	opt := NewOptimization(config.Optimization, len(tsp.matrix))
 
 	// Generate feasible solution
 	best := cons.process(tsp)
-	return best
 
 	for iteration < iterationMax {
 		iteration++
@@ -30,20 +34,17 @@ func VNS(tsp *PDPTW, config *config.Config) (s *Solution) {
 
 		// Try to improve
 
-		// local2opt
-
 		// Simmulated annealing with local 2 opt
 		// sa := SA{}
 
 		// s = sa.Process(s)
 
-		s = opt.Process(s)
+		// local2opt
+		s = opt.process(s)
 
-		if s.MakeSpan() < best.MakeSpan() {
+		if opt.objective.get(s) < opt.objective.get(best) {
 			best = s
-			log.Print(s.MakeSpan())
 		}
 	}
-
 	return best
 }

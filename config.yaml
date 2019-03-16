@@ -1,13 +1,14 @@
 vns:
   iterMax: 2
 construction:
-  strategy: sortByTW
-  levelMax: 30
+  strategy: random
+  levelMax: 10
   penalty:
     timeWindows: 100
+    pickupDelivery: 10
     capacity: 1
-    pickupDelivery: 1
 optimization:
   strategy: cons2opt
-  iterMax: 10
-  levelMax: 10
+  objective: span
+  iterMax: 4
+  levelMax: 50

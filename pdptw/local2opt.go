@@ -3,113 +3,182 @@ package pdptw
 import (
 	"log"
 	"math/rand"
-	"reflect"
 
 	"github.com/mitas1/psa-core/config"
-	"github.com/mitas1/psa-core/utils"
 )
 
-// interface of local 2opt search
-type local2Opt interface {
-	Process(*Solution) *Solution
-}
-
-type local2OptBase struct{}
-
-// TODO - Rewrite needed
-func (local local2OptBase) disturb(s *Solution, level int) *Solution {
-
-	levelMax := level
-	var j int
-	imp := false
-
-	for j < levelMax {
-
-		// take a random node
-		n1 := rand.Int()%len(s.route) + 1
-
-		for i := n1; i < len(s.route); i++ {
-			if i != n1 {
-				s, imp = local.exchange(s, n1, i)
-				if imp {
-					break
-				}
-			}
-		}
-		j++
-	}
-	return s
-}
-
-func (local2OptBase) exchange(s *Solution, iaux, jaux int) (*Solution, bool) {
-	if iaux > jaux {
-		return s, false
-	}
-	start := iaux + 1 // start = n1 +1
-	end := jaux       // end = n3
-
-	prev := s.MakeSpan()
-
-	x := s.Copy()
-
-	aux := 0
-	j := 0
-
-	// median
-	f := (end-start+1)/2 + start - 1
-
-	for i := start; i <= f; i++ {
-		j = end - (i - start)
-		aux = x.route[i]
-		x.route[i] = x.route[j]
-		x.route[j] = aux
-	}
-
-	if x.IsFeasible() && prev > x.MakeSpan() {
-		return x, true
-	}
-	return s, false
-}
-
-func NewOptimization(opts config.Optimization, numNodes int) (opt local2Opt) {
-	switch opts.Strategy {
-	case "2opt":
-		opt = Local2Opt{inc: make([]int, numNodes)}
-	case "cons2opt":
-		opt = cons2Opt{inc: make([]int, numNodes)}
+// NewOptimization returns local2opt optimization strategy
+func NewOptimization(opts config.Optimization, numNodes int) local2Opt {
+	var obj objective
+	switch {
+	case "time" == opts.Objective && opts.Asymetric:
+		obj = totalTimeA{}
+	case "time" == opts.Objective:
+		obj = totalTime{}
+	case "span" == opts.Objective:
+		obj = spanTime{}
 	default:
-		opt = cons2Opt{inc: make([]int, numNodes)}
+		obj = spanTime{}
 	}
 
-	return opt
+	switch opts.Strategy {
+	default:
+		return local2Opt{
+			levelMax:  opts.LevelMax,
+			iterMax:   opts.IterMax,
+			objective: obj,
+			strategy: cons2Opt{
+				travelled:  make([]int, numNodes),
+				precedence: make(map[int]int),
+				carrying:   make(map[int]int),
+				objective:  obj}}
+	}
+
+	return local2Opt{}
 }
 
-// constrained 2 opt
-type cons2Opt struct {
-	local2OptBase
-	inc []int
+// interface of local 2opt search
+type localSearch interface {
+	process(*Solution)
 }
 
-func (local cons2Opt) Process(x *Solution) *Solution {
+type local2Opt struct {
+	strategy localSearch
+	levelMax int
+	iterMax  int
+	objective
+}
+
+type objective interface {
+	get(*Solution) int
+	isProfitable(s *Solution, i, j int, spans ...int) bool
+}
+
+type spanTime struct{}
+type totalTime struct{}
+type totalTimeA struct{}
+
+func (spanTime) get(s *Solution) int {
+	traveled := 0
+	for i := 0; i < len(s.route)-1; i++ {
+		if traveled < s.tsp.readytime[s.route[i]] {
+			traveled = s.tsp.readytime[s.route[i]]
+		}
+		traveled += s.tsp.matrix[s.route[i]][s.route[i+1]]
+	}
+	return traveled
+}
+
+func (spanTime) isProfitable(s *Solution, i, j int, spans ...int) bool {
+	var n1, n2 int
+
+	sum := spans[1]
+	n1 = s.route[i]
+	n2 = s.route[j]
+
+	if s.tsp.readytime[n1] > sum {
+		sum = s.tsp.readytime[n1]
+	}
+
+	sum += s.tsp.matrix[n1][n2]
+
+	for k := j; k > i+1; k-- {
+		n1 = s.route[k]
+		n2 = s.route[k-1]
+
+		if s.tsp.readytime[n1] > sum {
+			sum = s.tsp.readytime[n1]
+		}
+
+		sum += s.tsp.matrix[n1][n2]
+	}
+
+	n1 = s.route[i+1]
+	n2 = s.route[j+1]
+
+	if s.tsp.readytime[n1] > sum {
+		sum = s.tsp.readytime[n1]
+	}
+
+	sum += s.tsp.matrix[n1][n2]
+
+	return spans[0] > sum
+}
+
+func (totalTime) get(s *Solution) int {
+	traveled := 0
+	for i := 0; i < len(s.route)-1; i++ {
+		traveled += s.tsp.matrix[s.route[i]][s.route[i+1]]
+	}
+	return traveled
+}
+
+func (totalTime) isProfitable(s *Solution, i, j int, spans ...int) bool {
+	n1 := s.route[i]
+	n2 := s.route[i+1]
+	n3 := s.route[j]
+	n4 := 0
+
+	if j < s.tsp.numNodes-1 {
+		n4 = s.route[j+1]
+	}
+
+	e1 := s.tsp.matrix[n1][n2]
+	e2 := s.tsp.matrix[n3][n4]
+
+	e3 := s.tsp.matrix[n1][n3]
+	e4 := s.tsp.matrix[n2][n4]
+
+	return e1+e2 > e3+e4
+}
+
+func (totalTimeA) get(s *Solution) int {
+	traveled := 0
+	for i := 0; i < len(s.route)-1; i++ {
+		traveled += s.tsp.matrix[s.route[i]][s.route[i+1]]
+	}
+	return traveled
+}
+
+func (totalTimeA) isProfitable(s *Solution, i, j int, spans ...int) bool {
+	n1 := s.route[i]
+	n2 := s.route[i+1]
+	n3 := s.route[j]
+	n4 := 0
+
+	if j < s.tsp.numNodes-1 {
+		n4 = s.route[j+1]
+	}
+
+	e1 := s.tsp.matrix[n1][n2]
+	e2 := s.tsp.matrix[n3][n4]
+
+	e3 := s.tsp.matrix[n1][n3]
+	e4 := s.tsp.matrix[n2][n4]
+
+	// TODO handle asymetric
+
+	return e1+e2 > e3+e4
+}
+
+// process strategy
+func (local local2Opt) process(x *Solution) *Solution {
 	level := 1
-	levelMax := 20
-	iterMax := 2
-
 	iterLevel := 0
 
-	local.local2Opt(x)
+	local.strategy.process(x)
 
-	for level < levelMax {
-		x2 := local.disturb(x, level)
+	for level < local.levelMax {
+		x2 := x.disturb(level)
 
-		local.local2Opt(x2)
+		local.strategy.process(x2)
 
-		if x2.MakeSpan() < x.MakeSpan() {
+		if local.objective.get(x2) < local.objective.get(x) {
 			iterLevel = 0
 			level = 1
 			x = x2
 		} else {
-			if iterLevel > iterMax {
+			if iterLevel > local.iterMax {
 				level++
 				iterLevel = 0
 			}
@@ -120,129 +189,76 @@ func (local cons2Opt) Process(x *Solution) *Solution {
 	return x
 }
 
-func (local cons2Opt) local2Opt(s *Solution) {
-	var pos, npos, n1, n2, n3, n4, e1, e2, e3, e4 int
-	improvement := false
+// constrained 2 opt
+type cons2Opt struct {
+	travelled  []int
+	precedence map[int]int
+	carrying   map[int]int
+	objective
+}
+
+func (c cons2Opt) process(s *Solution) {
+	var pos, i int
+
 	numNodes := s.tsp.numNodes
-
 	// create auxiliary set
-	setSize := numNodes - 2
-	set := make([]int, setSize)
+	pointer := numNodes - 2
+	set := make([]int, pointer)
 
-	for i := 0; i < setSize; i++ {
-		set[i] = i + 1
+	for i := 0; i < pointer; i++ {
+		set[i] = i
 	}
 
-	inc, pred, capacity := local.calcGlobals(s)
+	c.calcGlobals(s)
 
-	// n1 -> n2 -> n3 -> n4
-	// n1 -> n3 -> n2 -> n4
-	for setSize > 0 {
-		improvement = false
+	// outerloop
+	for pointer > 0 {
+	outer:
+		// generate random outerloop i
+		pos = rand.Intn(pointer)
+		i = set[pos]
 
-		pos = rand.Int() % setSize
-
-		npos = set[pos]
-
-		n1 = s.route[npos]
-		n2 = s.route[npos+1]
-		e1 = s.tsp.matrix[n1][n2]
-
-		for i := npos + 2; i < numNodes; i++ {
-			n3 = s.route[i]
-
-			n4 = 0
-			if i < numNodes-1 {
-				n4 = s.route[i+1]
-			}
-
-			e2 = s.tsp.matrix[n3][n4]
-
-			e3 = s.tsp.matrix[n1][n3]
-			e4 = s.tsp.matrix[n2][n4]
-
-			if e1+e2 > e3+e4 {
-				if local.isFeasible(s, npos, i, inc, pred, capacity) {
-					inc, pred = local.exchangeGlobalUpdate(s, npos, i, inc, pred, capacity)
-
-					inc2, pred2, _ := local.calcGlobals(s)
-
-					if !utils.Equal(inc2, inc) {
-						log.Printf("\n%v - %v\n%v\n%v\nFUCKING\n\n", npos, i, inc, inc2)
-					}
-
-					if !reflect.DeepEqual(pred, pred2) {
-						s.Print()
-						log.Printf("\n%v - %v\n%v\n%v\nFUCKING\n\n", npos, i, pred, pred2)
-					}
-
-					improvement = true
-					break
+		// iner loop
+		for j := i + 2; j < numNodes-1; j++ {
+			if c.objective.isProfitable(s, i, j, c.travelled[j+1], c.travelled[i]) {
+				if c.isFeasible(s, i, j) {
+					c.exchangeGlobalUpdate(s, i, j)
+					pointer = numNodes - 2
+					goto outer
 				}
+				break
 			}
 		}
-
-		if improvement {
-			setSize = numNodes - 2
-		} else {
-			aux := set[setSize-1]
-			set[setSize-1] = npos
-			set[pos] = aux
-			setSize--
-		}
+		pointer--
+		set[pointer], set[pos] = i, set[pointer]
 	}
 	return
 }
 
-func (cons2Opt) exchangeGlobalUpdate(
-	s *Solution, iaux, jaux int, inc []int, precedence map[int]int, capacity map[int]int,
-) ([]int, map[int]int) {
-	if iaux > jaux {
-		return nil, nil
-	}
+func (c cons2Opt) exchangeGlobalUpdate(s *Solution, iaux, jaux int) {
+	start := iaux + 1
+	end := jaux
 
-	start := iaux + 1 // start = n1 +1
-	end := jaux       // end = n3
-
-	aux := 0
 	j := 0
 
-	var pred_i, pred_j int
+	median := (end-start+1)/2 + start - 1
 
-	// median
-	f := (end-start+1)/2 + start - 1
-
-	// log.Printf("BEFORE: %v, %v \n%v\n", iaux, jaux, precedence)
-
-	for i := start; i <= f; i++ {
-
+	for i := start; i <= median; i++ {
 		j = end - (i - start)
-
-		// log.Printf("BEFORE: %v, %v ", i, j)
-
-		aux = s.route[i]
-		s.route[i] = s.route[j]
-		s.route[j] = aux
+		// exchange
+		s.route[i], s.route[j] = s.route[j], s.route[i]
 
 		// update precedence
-		pred_i = precedence[i]
-		pred_j = precedence[j]
-
-		precedence[pred_i] = j
-		precedence[pred_j] = i
-
-		precedence[j] = pred_i
-		precedence[i] = pred_j
+		c.precedence[c.precedence[i]], c.precedence[c.precedence[j]],
+			c.precedence[j], c.precedence[i] = j, i, c.precedence[i], c.precedence[j]
 	}
-
-	// log.Printf("AFTER: \n%v\n\n\n\n", precedence)
 
 	var n1, n2 int
 
-	sum := inc[iaux-1]
+	sum := c.travelled[iaux]
+	carrying := c.carrying[iaux-1]
 
 	// update the reversed path
-
 	for i := iaux; i < jaux; i++ {
 
 		n1 = s.route[i]
@@ -253,12 +269,13 @@ func (cons2Opt) exchangeGlobalUpdate(
 		}
 
 		sum += s.tsp.matrix[n1][n2]
+		carrying += s.tsp.demands[n1]
 
-		inc[i] = sum
+		c.travelled[i+1] = sum
+		c.carrying[i] = carrying
 	}
 
 	// update the rest
-
 	for i := jaux; i < len(s.route)-1; i++ {
 		n1 = s.route[i]
 		n2 = s.route[i+1]
@@ -268,21 +285,21 @@ func (cons2Opt) exchangeGlobalUpdate(
 		}
 
 		sum += s.tsp.matrix[n1][n2]
+		carrying += s.tsp.demands[n1]
 
-		inc[i] = sum
+		c.travelled[i+1] = sum
+		c.carrying[i] = carrying
 	}
 
-	return inc, precedence
+	return
 }
 
 // exchange (i,i+1), (j,j+1) ===> (i,j), (i+1,j+1)
-func (cons2Opt) isFeasible(
-	s *Solution, i, j int, inc []int, precedence map[int]int, capacity map[int]int,
-) bool {
+func (c cons2Opt) isFeasible(s *Solution, i, j int) bool {
 
-	sum := inc[i]
+	sum := c.travelled[i]
 
-	carrying := capacity[i]
+	carrying := c.carrying[i]
 
 	n1 := s.route[i]
 	n2 := s.route[j]
@@ -318,7 +335,7 @@ func (cons2Opt) isFeasible(
 
 		// precendence
 
-		if precedence[k] > i && precedence[k] < j {
+		if c.precedence[k] > i && c.precedence[k] < j {
 			return false
 		}
 
@@ -375,18 +392,18 @@ func (cons2Opt) isFeasible(
 		}
 	}
 
+	if s.tsp.readytime[s.route[len(s.route)-2]] > sum {
+		sum = s.tsp.readytime[s.route[len(s.route)-2]]
+	}
+
 	return true
 }
 
-func (cons2Opt) calcGlobals(s *Solution) ([]int, map[int]int, map[int]int) {
+func (c cons2Opt) calcGlobals(s *Solution) {
+	var n1, n2 int
+
 	sum := 0
 	carrying := 0
-	n1 := 0
-	n2 := 0
-
-	travelled := make([]int, len(s.route))
-	precendence := make(map[int]int)
-	capacity := make(map[int]int)
 
 	for i := 0; i < len(s.route)-1; i++ {
 		// travelled
@@ -399,7 +416,7 @@ func (cons2Opt) calcGlobals(s *Solution) ([]int, map[int]int, map[int]int) {
 
 		sum += s.tsp.matrix[n1][n2]
 
-		travelled[i] = sum
+		c.travelled[i+1] = sum
 
 		// precedence
 
@@ -408,73 +425,83 @@ func (cons2Opt) calcGlobals(s *Solution) ([]int, map[int]int, map[int]int) {
 			n3 = -n3
 		}
 
-		precendence[i] = indexOf(n3, s.route)
+		c.precedence[i] = indexOf(n3, s.route)
 
 		// capacity
 
 		carrying += s.tsp.demands[n1]
 
-		capacity[i] = carrying
+		c.carrying[i] = carrying
 	}
 
-	precendence[len(s.route)-1] = indexOf(s.tsp.pred[s.route[len(s.route)-1]], s.route)
+	c.precedence[len(s.route)-1] = indexOf(s.tsp.pred[s.route[len(s.route)-1]], s.route)
 
-	return travelled, precendence, capacity
+	return
+}
+
+func (cons2Opt) isProfitable(s *Solution, i, j int, spans ...int) bool {
+	var n1, n2 int
+
+	sum := spans[1]
+	n1 = s.route[i]
+	n2 = s.route[j]
+
+	if s.tsp.readytime[n1] > sum {
+		sum = s.tsp.readytime[n1]
+	}
+
+	sum += s.tsp.matrix[n1][n2]
+
+	for k := j; k > i+1; k-- {
+		n1 = s.route[k]
+		n2 = s.route[k-1]
+
+		if s.tsp.readytime[n1] > sum {
+			sum = s.tsp.readytime[n1]
+		}
+
+		sum += s.tsp.matrix[n1][n2]
+	}
+
+	n1 = s.route[i+1]
+	n2 = s.route[j+1]
+
+	if s.tsp.readytime[n1] > sum {
+		sum = s.tsp.readytime[n1]
+	}
+
+	sum += s.tsp.matrix[n1][n2]
+
+	return spans[0] > sum
 }
 
 type Local2Opt struct {
 	inc []int
 }
 
-func (local Local2Opt) Process(x *Solution) *Solution {
-	level := 1
-	levelMax := 20
-	iterMax := 2
-
-	iterLevel := 0
-
-	local.local2Opt(x)
-
-	for level < levelMax {
-		x2 := local.disturb(x, level)
-
-		local.local2Opt(x2)
-
-		if x2.MakeSpan() < x.MakeSpan() {
-			iterLevel = 0
-			level = 1
-			x = x2
-		} else {
-			if iterLevel > iterMax {
-				level++
-				iterLevel = 0
-			}
-		}
-		iterLevel++
-	}
-
-	return x
+func (local Local2Opt) objective(x *Solution) int {
+	return 0
 }
 
-func (local *Local2Opt) local2Opt(s *Solution) {
+func (local *Local2Opt) process(s *Solution) {
 	var pos, npos, n1, n2, n3, n4, e1, e2, e3, e4 int
 	improvement := false
 	numNodes := s.tsp.numNodes
 
 	// create auxiliary set
-	setSize := numNodes - 2
-	set := make([]int, setSize)
+	pointer := numNodes - 2
+	set := make([]int, pointer)
 
-	for i := 0; i < setSize; i++ {
+	for i := 0; i < pointer; i++ {
 		set[i] = i + 1
 	}
 
 	// n1 -> n2 -> n3 -> n4
 	// n1 -> n3 -> n2 -> n4
-	for setSize > 0 {
+	for pointer > 0 {
 		improvement = false
 
-		pos = rand.Int() % setSize
+		pos = rand.Int() % pointer
 
 		npos = set[pos]
 
@@ -504,12 +531,12 @@ func (local *Local2Opt) local2Opt(s *Solution) {
 		}
 
 		if improvement {
-			setSize = numNodes - 2
+			pointer = numNodes - 2
 		} else {
-			aux := set[setSize-1]
-			set[setSize-1] = npos
+			aux := set[pointer-1]
+			set[pointer-1] = npos
 			set[pos] = aux
-			setSize--
+			pointer--
 		}
 	}
 	return
@@ -544,6 +571,7 @@ func (*Local2Opt) exchange(s *Solution, iaux, jaux int) (*Solution, bool) {
 	if x.IsFeasible() && prev > x.MakeSpan() {
 		return x, true
 	}
+	// log.Print("SKIP")
 	return s, false
 }
 
@@ -596,22 +624,6 @@ func (local *Local2Opt) disturb(s *Solution, level int) *Solution {
 		j++
 	}
 	return s
-}
-
-func (local *Local2Opt) calcProfit(s *Solution, travelled, i, j int) int {
-	n1 := s.route[i]
-	n2 := s.route[i+1]
-	e1 := s.tsp.matrix[n1][n2]
-
-	n3 := s.route[j]
-	n4 := s.route[j+1]
-
-	e2 := s.tsp.matrix[n3][n4]
-
-	e3 := s.tsp.matrix[n1][n3]
-	e4 := s.tsp.matrix[n2][n4]
-
-	return (e3 + e4) - (e1 + e2)
 }
 
 // exchange (i,i+1), (j,j+1) ===> (i,j), (i+1,j+1)
@@ -681,6 +693,25 @@ func (local *Local2Opt) isTWfeasible(s *Solution, i, j int, inc []int) bool {
 	return true
 }
 
+func (Local2Opt) isProfitable(s *Solution, i, j int) bool {
+	n1 := s.route[i]
+	n2 := s.route[i+1]
+	n3 := s.route[j]
+	n4 := 0
+
+	if j < s.tsp.numNodes-1 {
+		n4 = s.route[j+1]
+	}
+
+	e1 := s.tsp.matrix[n1][n2]
+	e2 := s.tsp.matrix[n3][n4]
+
+	e3 := s.tsp.matrix[n1][n3]
+	e4 := s.tsp.matrix[n2][n4]
+
+	return e1+e2 > e3+e4
+}
+
 func (local *Local2Opt) local2OptLexical(s *Solution) {
 
 	log.Print(s.IsFeasible())
@@ -716,7 +747,7 @@ func (local *Local2Opt) local2OptLexical(s *Solution) {
 				break
 			}
 
-			if local.calcProfit(s, inc[i], i, j) > 0 {
+			if local.isProfitable(s, i, j) {
 				// log.Print(s.MakeSpan())
 				log.Printf("EXCHANGE: %v - %v - %v", i, j, local.isTWfeasible(s, i, j, inc))
 				local.clearExchange(s, i, j)
@@ -726,7 +757,7 @@ func (local *Local2Opt) local2OptLexical(s *Solution) {
 				break
 			}
 
-			// log.Printf("PROFIT: %v", local.calcProfit(s, traveled, i, j))
+			// log.Printf("PROFIT: %v", local.isProfitable(s, traveled, i, j))
 
 			feas := true
 
@@ -805,10 +836,6 @@ func (local *Local2Opt) local2OptLexical(s *Solution) {
 			break
 		}
 	}
-
-	s.Print()
-
-	log.Printf("IS FEASIBLE: %v\nIS FEASIBLE PRECEDENCE: %v\n\n", s.IsFeasible(), s.IsFeasiblePrecendence())
 }
 
 func Contains(a []int, x int) bool {
@@ -914,6 +941,8 @@ func (*Local2Opt) calcGlobals(s *Solution) ([]int, map[int]int, map[int]int) {
 	}
 
 	precendence[len(s.route)-1] = indexOf(s.tsp.pred[s.route[len(s.route)-1]], s.route)
+
+	log.Print(precendence)
 
 	return travelled, precendence, capacity
 }
