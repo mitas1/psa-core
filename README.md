@@ -1,7 +1,7 @@
 # PSA core
 
-PSA core is basically a solver based on 2-phase heurstic. It consists of the
-construction and optimization. This repository is part of the diploma thesis of the author.
+PSA core is basically a PDPTW solver based on 2-phase heurstic. It consists of the
+construction and optimization phase. This repository is part of the diploma thesis of the author.
 
 ## Building and running
 
