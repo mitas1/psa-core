@@ -42,8 +42,7 @@ This table describes available configuration options:
 | `construction.penalty.timeWindows`    | Weight of time windows penalty                      |
 | `construction.penalty.pickupDelivery`    | Weight of pickup and delivery penalty            |
 | `construction.penalty.capacity`    | Weight of capacity penalty                             |
-| `optimization.objective`  | Objective function in optimization phase. Available choices are `span` and
-`time` |
+| `optimization.objective`  | Objective function in optimization phase. Available choices are `span` and `time` |
 | `optimization.asymetric`  | Whether the instance is asymetric or not                       |
 | `optimization.gvns`       | If specified GVNS is used as optimzation phase                 |
 | `optimization.gvns.levelMax`  | Maximum level of perturbation in optimization part                 |
@@ -53,8 +52,8 @@ Example config:
 
 ```yaml
 common:
-  iterMax: 3
-  maxTime: 1
+  iterMax: 2
+  maxTime: 100
 construction:
   strategy: random
   levelMax: 10
@@ -66,9 +65,7 @@ optimization:
   objective: span
   gvns:
     iterMax: 4
-    levelMax: 50
-
-
+    levelMax: 40
 ```
 
 # Benchmarks
