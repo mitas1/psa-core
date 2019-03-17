@@ -1,4 +1,4 @@
-package pdptw
+package core
 
 import (
 	"math"
@@ -6,11 +6,15 @@ import (
 )
 
 type SA struct {
-	search    local2Opt
+	search    localSearch
 	objective objective
 }
 
-func (local *SA) Process(state *Solution) *Solution {
+func NewSA(obj objective) SA {
+	return SA{objective: obj, search: cons2Opt{objective: obj}}
+}
+
+func (local SA) process(state *Solution) *Solution {
 	iterMax := 30.0
 	iter := 0.0
 	T := 0.0
@@ -30,7 +34,7 @@ func (local *SA) Process(state *Solution) *Solution {
 		// log.Printf("Fraction - %v", int(fraction*100))
 		newState = state.disturb(int(fraction * 100))
 		//disturb := newState.MakeSpan()
-		newState = local.search.process(newState)
+		local.search.process(newState)
 
 		newCost = float64(local.objective.get(newState))
 
