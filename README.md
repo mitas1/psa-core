@@ -1,8 +1,7 @@
 # PSA core
 
-PSA core is basically a solver based on variable neighbourhood search. It consists of the
-construction and optimization part where in both the VNS is applied. This repository is part of the
-diploma thesis of the author.
+PSA core is basically a solver based on 2-phase heurstic. It consists of the
+construction and optimization. This repository is part of the diploma thesis of the author.
 
 ## Building and running
 
@@ -67,5 +66,3 @@ optimization:
     iterMax: 4
     levelMax: 40
 ```
-
-# Benchmarks
