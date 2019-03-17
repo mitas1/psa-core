@@ -34,34 +34,41 @@ This table describes available configuration options:
 
 | Name             | Description                                                             |
 | ---------------- | ----------------------------------------------------------------------- |
-| `vns.iterMax`    | Maximum iteretion of the overall VNS                                    |
-| `vns.maxTime`    | Maximum execution time in seconds                                       |
+| `common.iterMax`    | Maximum iteretion of the overall Algorithm                           |
+| `common.maxTime`    | Maximum execution time in seconds                                    |
 | `construction.strategy`  | Strategy used to create the first posibly unfeasible solution. Available choices are `random`, `greedy`, `sortedBydueDate` and `sortedByTW` |
 | `construction.levelMax`  | Maximum level of perturbation in constraction part               |
 | `construction.iterMax`   | Maximum iteretion in construction part                           |
-| `construction.penalty.timeWindows`    | Weight of time windows penalty                         |
-| `construction.penalty.pickupDelivery`    | Weight of pickup and delivery penalty                         |
-| `construction.penalty.capacity`    | Weight of capacity penalty                         |
-| `optimization.strategy`  | Strategy used in optimization part. Available choices are  `2opt` and  `lexical2opt` |
-| `optimization.levelMax`  | Maximum level of perturbation in optimization part                 |
-| `optimization.iterMax`  | Maximum iteretion in optimization part                              |
+| `construction.penalty.timeWindows`    | Weight of time windows penalty                      |
+| `construction.penalty.pickupDelivery`    | Weight of pickup and delivery penalty            |
+| `construction.penalty.capacity`    | Weight of capacity penalty                             |
+| `optimization.objective`  | Objective function in optimization phase. Available choices are `span` and
+`time` |
+| `optimization.asymetric`  | Whether the instance is asymetric or not                       |
+| `optimization.gvns`       | If specified GVNS is used as optimzation phase                 |
+| `optimization.gvns.levelMax`  | Maximum level of perturbation in optimization part                 |
+| `optimization.gvns.iterMax`   | Maximum iteretion in optimization part                             |
 
 Example config:
 
 ```yaml
-vns:
-  iterMax: 2
+common:
+  iterMax: 3
+  maxTime: 1
 construction:
   strategy: random
   levelMax: 10
-  penaltyWeight:
-    timeWindow: 100
+  penalty:
+    timeWindows: 100
+    pickupDelivery: 10
     capacity: 1
-    pickupDelivery: 1
 optimization:
-  strategy: 2opt
-  iterMax: 10
-  levelMax: 10
+  objective: span
+  gvns:
+    iterMax: 4
+    levelMax: 50
+
+
 ```
 
 # Benchmarks
