@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/mitas1/psa-core/config"
-	"github.com/mitas1/psa-core/pdptw"
+	"github.com/mitas1/psa-core/core"
 	logging "github.com/op/go-logging"
 	"github.com/spf13/pflag"
 )
@@ -37,11 +37,11 @@ func runAll(instancesPath, solutionsPath string, config *config.Config) {
 
 	res := ""
 
-	vns := pdptw.NewVNS(config)
+	vns := core.NewCore(config)
 
 	for _, file := range files {
 		log.Printf("Solving: %s", file.Name())
-		tsp := pdptw.ReadFromFile(instancesPath, file.Name())
+		tsp := core.ReadFromFile(instancesPath, file.Name())
 		start := time.Now()
 		s, err := vns.Process(tsp)
 		if err != nil {
@@ -88,11 +88,11 @@ func main() {
 
 	log.Printf("Solving: %s", "a.psa")
 
-	tsp := pdptw.ReadFromFile(instancesPath, "01.psa")
+	tsp := core.ReadFromFile(instancesPath, "01.psa")
 
 	fmt.Printf("%#v", tsp)
 
-	vns := pdptw.NewVNS(&c)
+	vns := core.NewCore(&c)
 
 	s, err := vns.Process(tsp)
 	if err != nil {

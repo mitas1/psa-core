@@ -1,183 +1,14 @@
-package pdptw
+package core
 
 import (
 	"math/rand"
 
-	"github.com/mitas1/psa-core/config"
 	"github.com/mitas1/psa-core/utils"
 )
-
-// NewOptimization returns local2opt optimization strategy
-func NewOptimization(opts config.Optimization, numNodes int) local2Opt {
-	var obj objective
-	switch {
-	case "time" == opts.Objective && opts.Asymetric:
-		obj = totalTimeA{}
-	case "time" == opts.Objective:
-		obj = totalTime{}
-	case "span" == opts.Objective:
-		obj = spanTime{}
-	default:
-		obj = spanTime{}
-	}
-
-	switch opts.Strategy {
-	default:
-		return local2Opt{
-			levelMax:  opts.LevelMax,
-			iterMax:   opts.IterMax,
-			objective: obj,
-			strategy: cons2Opt{
-				traveled:   make([]int, numNodes),
-				precedence: make(map[int]int),
-				carrying:   make(map[int]int),
-				objective:  obj}}
-	}
-
-	return local2Opt{}
-}
 
 // interface of local 2opt search
 type localSearch interface {
 	process(*Solution)
-}
-
-type local2Opt struct {
-	strategy localSearch
-	levelMax int
-	iterMax  int
-	objective
-}
-
-func (spanTime) get(s *Solution) int {
-	traveled := 0
-	for i := 0; i < len(s.route)-1; i++ {
-		if traveled < s.tsp.readyTime[s.route[i]] {
-			traveled = s.tsp.readyTime[s.route[i]]
-		}
-		traveled += s.tsp.matrix[s.route[i]][s.route[i+1]]
-	}
-	return traveled
-}
-
-func (spanTime) isProfitable(s *Solution, i, j int, spans ...int) bool {
-	var n1, n2 int
-
-	sum := spans[1]
-	n1 = s.route[i]
-	n2 = s.route[j]
-
-	if s.tsp.readyTime[n1] > sum {
-		sum = s.tsp.readyTime[n1]
-	}
-
-	sum += s.tsp.matrix[n1][n2]
-
-	for k := j; k > i+1; k-- {
-		n1 = s.route[k]
-		n2 = s.route[k-1]
-
-		if s.tsp.readyTime[n1] > sum {
-			sum = s.tsp.readyTime[n1]
-		}
-
-		sum += s.tsp.matrix[n1][n2]
-	}
-
-	n1 = s.route[i+1]
-	n2 = s.route[j+1]
-
-	if s.tsp.readyTime[n1] > sum {
-		sum = s.tsp.readyTime[n1]
-	}
-
-	sum += s.tsp.matrix[n1][n2]
-
-	return spans[0] > sum
-}
-
-func (totalTime) get(s *Solution) int {
-	traveled := 0
-	for i := 0; i < len(s.route)-1; i++ {
-		traveled += s.tsp.matrix[s.route[i]][s.route[i+1]]
-	}
-	return traveled
-}
-
-func (totalTime) isProfitable(s *Solution, i, j int, spans ...int) bool {
-	n1 := s.route[i]
-	n2 := s.route[i+1]
-	n3 := s.route[j]
-	n4 := 0
-
-	if j < s.tsp.numNodes-1 {
-		n4 = s.route[j+1]
-	}
-
-	e1 := s.tsp.matrix[n1][n2]
-	e2 := s.tsp.matrix[n3][n4]
-
-	e3 := s.tsp.matrix[n1][n3]
-	e4 := s.tsp.matrix[n2][n4]
-
-	return e1+e2 > e3+e4
-}
-
-func (totalTimeA) get(s *Solution) int {
-	traveled := 0
-	for i := 0; i < len(s.route)-1; i++ {
-		traveled += s.tsp.matrix[s.route[i]][s.route[i+1]]
-	}
-	return traveled
-}
-
-func (totalTimeA) isProfitable(s *Solution, i, j int, spans ...int) bool {
-	n1 := s.route[i]
-	n2 := s.route[i+1]
-	n3 := s.route[j]
-	n4 := 0
-
-	if j < s.tsp.numNodes-1 {
-		n4 = s.route[j+1]
-	}
-
-	e1 := s.tsp.matrix[n1][n2]
-	e2 := s.tsp.matrix[n3][n4]
-
-	e3 := s.tsp.matrix[n1][n3]
-	e4 := s.tsp.matrix[n2][n4]
-
-	// TODO handle asymetric
-
-	return e1+e2 > e3+e4
-}
-
-// process strategy
-func (local local2Opt) process(x *Solution) *Solution {
-	level := 1
-	iterLevel := 0
-
-	local.strategy.process(x)
-
-	for level < local.levelMax {
-		x2 := x.disturb(level)
-
-		local.strategy.process(x2)
-
-		if local.objective.get(x2) < local.objective.get(x) {
-			iterLevel = 0
-			level = 1
-			x = x2
-		} else {
-			if iterLevel > local.iterMax {
-				level++
-				iterLevel = 0
-			}
-		}
-		iterLevel++
-	}
-
-	return x
 }
 
 // constrained 2 opt
@@ -396,7 +227,9 @@ func (c *cons2Opt) calcGlobals(s *Solution) {
 	sum := s.tsp.traveled
 	carrying := s.tsp.carrying
 
+	c.traveled = make([]int, s.tsp.numNodes)
 	c.precedence = make(map[int]int)
+	c.carrying = make(map[int]int)
 
 	for i := 0; i < len(s.route)-1; i++ {
 		// traveled
@@ -435,40 +268,4 @@ func (c *cons2Opt) calcGlobals(s *Solution) {
 	c.precedence[index] = i
 
 	return
-}
-
-func (cons2Opt) isProfitable(s *Solution, i, j int, spans ...int) bool {
-	var n1, n2 int
-
-	sum := spans[1]
-	n1 = s.route[i]
-	n2 = s.route[j]
-
-	if s.tsp.readyTime[n1] > sum {
-		sum = s.tsp.readyTime[n1]
-	}
-
-	sum += s.tsp.matrix[n1][n2]
-
-	for k := j; k > i+1; k-- {
-		n1 = s.route[k]
-		n2 = s.route[k-1]
-
-		if s.tsp.readyTime[n1] > sum {
-			sum = s.tsp.readyTime[n1]
-		}
-
-		sum += s.tsp.matrix[n1][n2]
-	}
-
-	n1 = s.route[i+1]
-	n2 = s.route[j+1]
-
-	if s.tsp.readyTime[n1] > sum {
-		sum = s.tsp.readyTime[n1]
-	}
-
-	sum += s.tsp.matrix[n1][n2]
-
-	return spans[0] > sum
 }
