@@ -1,4 +1,4 @@
-package pdptw
+package core
 
 import (
 	"bufio"

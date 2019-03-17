@@ -1,4 +1,4 @@
-vns:
+common:
   iterMax: 3
   maxTime: 1
 construction:
@@ -9,7 +9,7 @@ construction:
     pickupDelivery: 10
     capacity: 1
 optimization:
-  strategy: cons2opt
   objective: span
-  iterMax: 4
-  levelMax: 50
+  gvns:
+    iterMax: 4
+    levelMax: 50

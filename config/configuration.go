@@ -11,7 +11,7 @@ var logger = logging.MustGetLogger("config")
 
 // Config is a configuration structure
 type Config struct {
-	VNS          VNS
+	Common       Common
 	Construction Construction
 	Optimization Optimization
 }
@@ -27,17 +27,20 @@ type Penalty struct {
 	Capacity       int
 }
 
-type VNS struct {
+type Common struct {
 	IterMax int
 	MaxTime time.Duration
 }
 
 type Optimization struct {
-	Strategy  string
 	Objective string
-	IterMax   int
-	LevelMax  int
 	Asymetric bool
+	GVNS      GVNS
+}
+
+type GVNS struct {
+	IterMax  int
+	LevelMax int
 }
 
 // LoadConfig loads configuration file
@@ -49,7 +52,7 @@ func (c *Config) LoadConfig(conf string) (err error) {
 		return
 	}
 
-	if err = viper.UnmarshalKey("vns", &c.VNS); err != nil {
+	if err = viper.UnmarshalKey("common", &c.Common); err != nil {
 		logger.Error(err.Error())
 		return
 	}
