@@ -59,16 +59,12 @@ func (s *Solution) WriteToFile(dir, name string) {
 
 // IsFeasible checks if solution is feasible
 func (s *Solution) IsFeasible() bool {
-	hasNode := false
-	traveled := 0
-	carrying := 0
+	traveled := s.tsp.travelled
+	carrying := s.tsp.carrying
 
 	for i := 1; i < s.tsp.numNodes; i++ {
-		hasNode = false
 		traveled += s.tsp.matrix[s.route[i-1]][s.route[i]]
 		carrying += s.tsp.demands[s.route[i-1]]
-
-		//log.Printf("%v - %v - %v", s.route[i-1], s.tsp.demands[s.route[i-1]], carrying)
 
 		// wait to ready to time
 		if traveled < s.tsp.readytime[s.route[i]] {
@@ -76,70 +72,53 @@ func (s *Solution) IsFeasible() bool {
 		}
 
 		if carrying > s.tsp.capacity {
-			// log.Print("CAPACITY OVERFLOW")
 			return false
 		}
 
-		if value, ok := s.tsp.precendense[s.route[i]]; ok {
-			for j := i; j > 0; j-- {
-				if value == s.route[j] {
-					hasNode = true
-					break
-				}
-			}
-			if !hasNode {
-				// log.Printf("%v - %v", s.route[i], i)
-				// log.Print("PRECEDENCE OVERFLOW")
+		if value, ok := s.tsp.precedence[s.route[i]]; ok {
+			if i <= utils.IndexOf(value, s.route) {
 				return false
 			}
 		}
 
 		if s.tsp.duedate[s.route[i]] != 0 && s.tsp.duedate[s.route[i]] < traveled {
-			// log.Printf("%v TIME WINDOW OVERFLOW", i)
 			return false
 		}
 	}
 
-	// log.Printf("%v - %v - %v", carrying)
+	i := len(s.route) - 1
+
+	if carrying+s.tsp.demands[s.route[i]] != 0 {
+		log.Print(carrying + s.tsp.demands[s.route[i]])
+		// log.Printf("FUK %v", carrying)
+	}
+
 	return true
 }
 
 func (s *Solution) getSet(setType SetType) (set []int) {
-	traveled := 0
-	carrying := 0
-	hasNode := false
-	tmp := false
+	traveled := s.tsp.travelled
+	carrying := s.tsp.carrying
+	predViolation := false
 
 	for i := 1; i < len(s.route); i++ {
 		traveled += s.tsp.matrix[s.route[i-1]][s.route[i]]
 		carrying += s.tsp.demands[s.route[i-1]]
-		hasNode = false
-		tmp = false
+		predViolation = false
 
 		// wait to ready to time
 		if traveled < s.tsp.readytime[s.route[i]] {
 			traveled = s.tsp.readytime[s.route[i]]
 		}
 
-		if val, ok := s.tsp.pred[s.route[i]]; ok {
-			for j := i; j < len(s.route); j++ {
-				if -val == s.route[j] {
-					hasNode = true
-					break
-				}
-			}
-			/* for j := i; j > 0; j-- {
-				if val == s.route[j] {
-					hasNode = true
-					break
-				}
-			} */
-			if !hasNode {
-				tmp = true
+		if value, ok := s.tsp.precedence[s.route[i]]; ok {
+			if i >= utils.IndexOf(value, s.route) {
+				predViolation = true
 			}
 		}
 
-		isFeasible := tmp || (s.tsp.duedate[s.route[i]] != 0 && s.tsp.duedate[s.route[i]] < traveled) || carrying > s.tsp.capacity
+		isFeasible := !predViolation || (s.tsp.duedate[s.route[i]] != 0 &&
+			s.tsp.duedate[s.route[i]] < traveled) || carrying > s.tsp.capacity
 
 		if setType == FEASIBLE_SET && isFeasible {
 			set = append(set, i)
@@ -204,7 +183,7 @@ func (s *Solution) TotalDistance() int {
 }
 
 func (s *Solution) MakeSpan() int {
-	traveled := 0
+	traveled := s.tsp.travelled
 	for i := 0; i < len(s.route)-1; i++ {
 		if traveled < s.tsp.readytime[s.route[i]] {
 			traveled = s.tsp.readytime[s.route[i]]
@@ -262,6 +241,41 @@ func (s *Solution) kExchange(iaux, jaux int) *Solution {
 
 //// ------- TESTING -----------------------------------------------------------
 
+func (s *Solution) Check() bool {
+
+	if s.tsp.startNode != s.route[0] {
+		log.Print("Wrong startnode!")
+		log.Print(s.route)
+		return false
+	}
+
+	if s.tsp.numNodes != len(s.route) {
+		log.Print("numNodes are not equal to route")
+		log.Print(s.route)
+		return false
+	}
+
+	set := make(map[int]bool)
+
+	for _, v := range s.route {
+		set[v] = true
+	}
+
+	if len(set) != len(s.route) {
+		log.Print("Some nodes are duplicated")
+		log.Print(s.route)
+		return false
+	}
+
+	if !s.IsFeasible() {
+		log.Print("Solution is not FEASIBLE!")
+		log.Print(s.route)
+		return false
+	}
+
+	return true
+}
+
 // IsFeasible checks if solution is feasible
 func (s *Solution) IsFeasiblePrecendence() bool {
 	hasNode := false
@@ -280,7 +294,7 @@ func (s *Solution) IsFeasiblePrecendence() bool {
 			traveled = s.tsp.readytime[s.route[i]]
 		}
 
-		if value, ok := s.tsp.precendense[s.route[i]]; ok {
+		if value, ok := s.tsp.precedence[s.route[i]]; ok {
 			for j := i; j > 0; j-- {
 				if value == s.route[j] {
 					hasNode = true
@@ -322,7 +336,7 @@ func (s *Solution) IsFeasibleLog() bool {
 			return false
 		}
 
-		if value, ok := s.tsp.precendense[s.route[i]]; ok {
+		if value, ok := s.tsp.precedence[s.route[i]]; ok {
 			for j := i; j > 0; j-- {
 				if value == s.route[j] {
 					hasNode = true

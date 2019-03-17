@@ -102,11 +102,11 @@ func GetRandomPD(tsp *PDPTW) *Solution {
 	tmp := make(map[int]bool, tsp.numNodes)
 
 	for i := 0; i < tsp.numNodes; i++ {
-		if value, ok := tsp.precendense[i]; ok {
+		if value, ok := tsp.precedence[i]; ok {
 			r1 = append(r1, value)
 			r2 = append(r2, i)
 			tmp[i] = true
-			tmp[tsp.precendense[i]] = true
+			tmp[tsp.precedence[i]] = true
 		}
 	}
 
