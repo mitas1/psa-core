@@ -35,3 +35,12 @@ func Equal(a, b []int) bool {
 func Random(min, max int) int {
 	return rand.Intn(max-min) + min
 }
+
+func IndexOf(element int, data []int) int {
+	for k, v := range data {
+		if element == v {
+			return k
+		}
+	}
+	return -1 //not found.
+}

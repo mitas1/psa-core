@@ -4,6 +4,7 @@ import (
 	"math/rand"
 
 	"github.com/mitas1/psa-core/config"
+	"github.com/mitas1/psa-core/utils"
 )
 
 // Direction for shifting
@@ -186,8 +187,8 @@ func (*Construction) disturb(s *Solution, level int) *Solution {
 	newSolution := s.Copy()
 
 	for i := 0; i < level; i++ {
-		n1 = rand.Intn(len(s.route))
-		n2 = rand.Intn(len(s.route))
+		n1 = utils.Random(1, len(s.route))
+		n2 = utils.Random(1, len(s.route))
 		newSolution.exchange(n1, n2)
 	}
 	return newSolution
@@ -196,11 +197,9 @@ func (*Construction) disturb(s *Solution, level int) *Solution {
 // Penalty is sum of all differences between the time to reach each customer
 // and its due date
 func (c Construction) Penalty(s *Solution) (penalty int) {
-	// resume here
-	traveled := 0
+	traveled := s.tsp.travelled
+	carrying := s.tsp.carrying
 	hasNode := false
-	// resume here
-	carrying := 0
 
 	p_tw := 0
 	p_pd := 0
@@ -221,7 +220,7 @@ func (c Construction) Penalty(s *Solution) (penalty int) {
 			p_c = p_c + (carrying - s.tsp.capacity)
 		}
 
-		if value, ok := s.tsp.precendense[s.route[i]]; ok {
+		if value, ok := s.tsp.precedence[s.route[i]]; ok {
 			for j := i; j > 0; j-- {
 				if value == s.route[j] {
 					hasNode = true

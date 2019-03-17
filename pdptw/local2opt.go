@@ -260,7 +260,6 @@ func (c cons2Opt) exchangeGlobalUpdate(s *Solution, iaux, jaux int) {
 
 	// update the reversed path
 	for i := iaux; i < jaux; i++ {
-
 		n1 = s.route[i]
 		n2 = s.route[i+1]
 
@@ -336,6 +335,7 @@ func (c cons2Opt) isFeasible(s *Solution, i, j int) bool {
 		// precendence
 
 		if c.precedence[k] > i && c.precedence[k] < j {
+			// log.Printf("EXCHANGE: i=%v j=%v k=%v %v| %v", i, j, k, c.precedence[k], c.precedence)
 			return false
 		}
 
@@ -399,11 +399,13 @@ func (c cons2Opt) isFeasible(s *Solution, i, j int) bool {
 	return true
 }
 
-func (c cons2Opt) calcGlobals(s *Solution) {
+func (c *cons2Opt) calcGlobals(s *Solution) {
 	var n1, n2 int
 
-	sum := 0
-	carrying := 0
+	sum := s.tsp.travelled
+	carrying := s.tsp.carrying
+
+	c.precedence = make(map[int]int)
 
 	for i := 0; i < len(s.route)-1; i++ {
 		// travelled
@@ -419,22 +421,27 @@ func (c cons2Opt) calcGlobals(s *Solution) {
 		c.travelled[i+1] = sum
 
 		// precedence
-
-		n3 := s.tsp.pred[n1]
-		if n3 < 0 {
-			n3 = -n3
+		if n, ok := s.tsp.precedence[n1]; ok {
+			index := indexOf(n, s.route)
+			c.precedence[index] = i
+			c.precedence[i] = index
+		} else if _, ok := c.precedence[i]; !ok {
+			// ignore precedence of vertex
+			c.precedence[i] = -1
 		}
-
-		c.precedence[i] = indexOf(n3, s.route)
-
-		// capacity
 
 		carrying += s.tsp.demands[n1]
 
 		c.carrying[i] = carrying
 	}
 
-	c.precedence[len(s.route)-1] = indexOf(s.tsp.pred[s.route[len(s.route)-1]], s.route)
+	i := len(s.route) - 1
+
+	n := s.tsp.precedence[s.route[i]]
+
+	index := indexOf(n, s.route)
+	c.precedence[i] = index
+	c.precedence[index] = i
 
 	return
 }
