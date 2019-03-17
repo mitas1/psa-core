@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	logging "github.com/op/go-logging"
 	"github.com/spf13/viper"
 )
@@ -27,6 +29,7 @@ type Penalty struct {
 
 type VNS struct {
 	IterMax int
+	MaxTime time.Duration
 }
 
 type Optimization struct {

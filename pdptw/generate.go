@@ -27,9 +27,9 @@ func (random) getSolution(tsp *PDPTW) *Solution {
 	return &s
 }
 
-type sortByDuedate struct{}
+type sortBydueDate struct{}
 
-func (sortByDuedate) getSolution(tsp *PDPTW) *Solution {
+func (sortBydueDate) getSolution(tsp *PDPTW) *Solution {
 	var route []int
 
 	for i := 0; i < tsp.numNodes; i++ {
@@ -38,9 +38,9 @@ func (sortByDuedate) getSolution(tsp *PDPTW) *Solution {
 		}
 	}
 
-	// sort by duedate
+	// sort by dueDate
 	sort.Slice(route, func(i, j int) bool {
-		return tsp.duedate[route[i]] < tsp.duedate[route[j]]
+		return tsp.dueDate[route[i]] < tsp.dueDate[route[j]]
 	})
 
 	s := NewSolution(tsp, append([]int{tsp.startNode}, route...))
@@ -58,7 +58,7 @@ func (sortByTW) getSolution(tsp *PDPTW) *Solution {
 	for i := 0; i < tsp.numNodes; i++ {
 		if i != tsp.startNode {
 			route = append(route, i)
-			median[i] = tsp.duedate[i] - ((tsp.duedate[i] - tsp.readytime[i]) / 2)
+			median[i] = tsp.dueDate[i] - ((tsp.dueDate[i] - tsp.readyTime[i]) / 2)
 		}
 	}
 
