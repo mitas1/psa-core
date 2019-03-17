@@ -59,7 +59,7 @@ func (s *Solution) WriteToFile(dir, name string) {
 
 // IsFeasible checks if solution is feasible
 func (s *Solution) IsFeasible() bool {
-	traveled := s.tsp.travelled
+	traveled := s.tsp.traveled
 	carrying := s.tsp.carrying
 
 	for i := 1; i < s.tsp.numNodes; i++ {
@@ -67,8 +67,8 @@ func (s *Solution) IsFeasible() bool {
 		carrying += s.tsp.demands[s.route[i-1]]
 
 		// wait to ready to time
-		if traveled < s.tsp.readytime[s.route[i]] {
-			traveled = s.tsp.readytime[s.route[i]]
+		if traveled < s.tsp.readyTime[s.route[i]] {
+			traveled = s.tsp.readyTime[s.route[i]]
 		}
 
 		if carrying > s.tsp.capacity {
@@ -81,7 +81,7 @@ func (s *Solution) IsFeasible() bool {
 			}
 		}
 
-		if s.tsp.duedate[s.route[i]] != 0 && s.tsp.duedate[s.route[i]] < traveled {
+		if s.tsp.dueDate[s.route[i]] != 0 && s.tsp.dueDate[s.route[i]] < traveled {
 			return false
 		}
 	}
@@ -97,7 +97,7 @@ func (s *Solution) IsFeasible() bool {
 }
 
 func (s *Solution) getSet(setType SetType) (set []int) {
-	traveled := s.tsp.travelled
+	traveled := s.tsp.traveled
 	carrying := s.tsp.carrying
 	predViolation := false
 
@@ -107,8 +107,8 @@ func (s *Solution) getSet(setType SetType) (set []int) {
 		predViolation = false
 
 		// wait to ready to time
-		if traveled < s.tsp.readytime[s.route[i]] {
-			traveled = s.tsp.readytime[s.route[i]]
+		if traveled < s.tsp.readyTime[s.route[i]] {
+			traveled = s.tsp.readyTime[s.route[i]]
 		}
 
 		if value, ok := s.tsp.precedence[s.route[i]]; ok {
@@ -117,8 +117,8 @@ func (s *Solution) getSet(setType SetType) (set []int) {
 			}
 		}
 
-		isFeasible := !predViolation || (s.tsp.duedate[s.route[i]] != 0 &&
-			s.tsp.duedate[s.route[i]] < traveled) || carrying > s.tsp.capacity
+		isFeasible := !predViolation || (s.tsp.dueDate[s.route[i]] != 0 &&
+			s.tsp.dueDate[s.route[i]] < traveled) || carrying > s.tsp.capacity
 
 		if setType == FEASIBLE_SET && isFeasible {
 			set = append(set, i)
@@ -183,10 +183,10 @@ func (s *Solution) TotalDistance() int {
 }
 
 func (s *Solution) MakeSpan() int {
-	traveled := s.tsp.travelled
+	traveled := s.tsp.traveled
 	for i := 0; i < len(s.route)-1; i++ {
-		if traveled < s.tsp.readytime[s.route[i]] {
-			traveled = s.tsp.readytime[s.route[i]]
+		if traveled < s.tsp.readyTime[s.route[i]] {
+			traveled = s.tsp.readyTime[s.route[i]]
 		}
 		traveled += s.tsp.matrix[s.route[i]][s.route[i+1]]
 	}
@@ -290,8 +290,8 @@ func (s *Solution) IsFeasiblePrecendence() bool {
 		//log.Printf("%v - %v - %v", s.route[i-1], s.tsp.demands[s.route[i-1]], carrying)
 
 		// wait to ready to time
-		if traveled < s.tsp.readytime[s.route[i]] {
-			traveled = s.tsp.readytime[s.route[i]]
+		if traveled < s.tsp.readyTime[s.route[i]] {
+			traveled = s.tsp.readyTime[s.route[i]]
 		}
 
 		if value, ok := s.tsp.precedence[s.route[i]]; ok {
@@ -327,8 +327,8 @@ func (s *Solution) IsFeasibleLog() bool {
 		//log.Printf("%v - %v - %v", s.route[i-1], s.tsp.demands[s.route[i-1]], carrying)
 
 		// wait to ready to time
-		if traveled < s.tsp.readytime[s.route[i]] {
-			traveled = s.tsp.readytime[s.route[i]]
+		if traveled < s.tsp.readyTime[s.route[i]] {
+			traveled = s.tsp.readyTime[s.route[i]]
 		}
 
 		if carrying > s.tsp.capacity {
@@ -350,7 +350,7 @@ func (s *Solution) IsFeasibleLog() bool {
 			}
 		}
 
-		if s.tsp.duedate[s.route[i]] != 0 && s.tsp.duedate[s.route[i]] < traveled {
+		if s.tsp.dueDate[s.route[i]] != 0 && s.tsp.dueDate[s.route[i]] < traveled {
 			log.Printf("%v TIME WINDOW OVERFLOW", i)
 			return false
 		}

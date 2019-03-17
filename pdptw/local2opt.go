@@ -28,7 +28,7 @@ func NewOptimization(opts config.Optimization, numNodes int) local2Opt {
 			iterMax:   opts.IterMax,
 			objective: obj,
 			strategy: cons2Opt{
-				travelled:  make([]int, numNodes),
+				traveled:   make([]int, numNodes),
 				precedence: make(map[int]int),
 				carrying:   make(map[int]int),
 				objective:  obj}}
@@ -61,8 +61,8 @@ type totalTimeA struct{}
 func (spanTime) get(s *Solution) int {
 	traveled := 0
 	for i := 0; i < len(s.route)-1; i++ {
-		if traveled < s.tsp.readytime[s.route[i]] {
-			traveled = s.tsp.readytime[s.route[i]]
+		if traveled < s.tsp.readyTime[s.route[i]] {
+			traveled = s.tsp.readyTime[s.route[i]]
 		}
 		traveled += s.tsp.matrix[s.route[i]][s.route[i+1]]
 	}
@@ -76,8 +76,8 @@ func (spanTime) isProfitable(s *Solution, i, j int, spans ...int) bool {
 	n1 = s.route[i]
 	n2 = s.route[j]
 
-	if s.tsp.readytime[n1] > sum {
-		sum = s.tsp.readytime[n1]
+	if s.tsp.readyTime[n1] > sum {
+		sum = s.tsp.readyTime[n1]
 	}
 
 	sum += s.tsp.matrix[n1][n2]
@@ -86,8 +86,8 @@ func (spanTime) isProfitable(s *Solution, i, j int, spans ...int) bool {
 		n1 = s.route[k]
 		n2 = s.route[k-1]
 
-		if s.tsp.readytime[n1] > sum {
-			sum = s.tsp.readytime[n1]
+		if s.tsp.readyTime[n1] > sum {
+			sum = s.tsp.readyTime[n1]
 		}
 
 		sum += s.tsp.matrix[n1][n2]
@@ -96,8 +96,8 @@ func (spanTime) isProfitable(s *Solution, i, j int, spans ...int) bool {
 	n1 = s.route[i+1]
 	n2 = s.route[j+1]
 
-	if s.tsp.readytime[n1] > sum {
-		sum = s.tsp.readytime[n1]
+	if s.tsp.readyTime[n1] > sum {
+		sum = s.tsp.readyTime[n1]
 	}
 
 	sum += s.tsp.matrix[n1][n2]
@@ -191,7 +191,7 @@ func (local local2Opt) process(x *Solution) *Solution {
 
 // constrained 2 opt
 type cons2Opt struct {
-	travelled  []int
+	traveled   []int
 	precedence map[int]int
 	carrying   map[int]int
 	objective
@@ -220,7 +220,7 @@ func (c cons2Opt) process(s *Solution) {
 
 		// iner loop
 		for j := i + 2; j < numNodes-1; j++ {
-			if c.objective.isProfitable(s, i, j, c.travelled[j+1], c.travelled[i]) {
+			if c.objective.isProfitable(s, i, j, c.traveled[j+1], c.traveled[i]) {
 				if c.isFeasible(s, i, j) {
 					c.exchangeGlobalUpdate(s, i, j)
 					pointer = numNodes - 2
@@ -255,7 +255,7 @@ func (c cons2Opt) exchangeGlobalUpdate(s *Solution, iaux, jaux int) {
 
 	var n1, n2 int
 
-	sum := c.travelled[iaux]
+	sum := c.traveled[iaux]
 	carrying := c.carrying[iaux-1]
 
 	// update the reversed path
@@ -263,14 +263,14 @@ func (c cons2Opt) exchangeGlobalUpdate(s *Solution, iaux, jaux int) {
 		n1 = s.route[i]
 		n2 = s.route[i+1]
 
-		if s.tsp.readytime[n1] > sum {
-			sum = s.tsp.readytime[n1]
+		if s.tsp.readyTime[n1] > sum {
+			sum = s.tsp.readyTime[n1]
 		}
 
 		sum += s.tsp.matrix[n1][n2]
 		carrying += s.tsp.demands[n1]
 
-		c.travelled[i+1] = sum
+		c.traveled[i+1] = sum
 		c.carrying[i] = carrying
 	}
 
@@ -279,14 +279,14 @@ func (c cons2Opt) exchangeGlobalUpdate(s *Solution, iaux, jaux int) {
 		n1 = s.route[i]
 		n2 = s.route[i+1]
 
-		if s.tsp.readytime[n1] > sum {
-			sum = s.tsp.readytime[n1]
+		if s.tsp.readyTime[n1] > sum {
+			sum = s.tsp.readyTime[n1]
 		}
 
 		sum += s.tsp.matrix[n1][n2]
 		carrying += s.tsp.demands[n1]
 
-		c.travelled[i+1] = sum
+		c.traveled[i+1] = sum
 		c.carrying[i] = carrying
 	}
 
@@ -296,20 +296,20 @@ func (c cons2Opt) exchangeGlobalUpdate(s *Solution, iaux, jaux int) {
 // exchange (i,i+1), (j,j+1) ===> (i,j), (i+1,j+1)
 func (c cons2Opt) isFeasible(s *Solution, i, j int) bool {
 
-	sum := c.travelled[i]
+	sum := c.traveled[i]
 
 	carrying := c.carrying[i]
 
 	n1 := s.route[i]
 	n2 := s.route[j]
 
-	if s.tsp.readytime[n1] > sum {
-		sum = s.tsp.readytime[n1]
+	if s.tsp.readyTime[n1] > sum {
+		sum = s.tsp.readyTime[n1]
 	}
 
 	sum += s.tsp.matrix[n1][n2]
 
-	if sum > s.tsp.duedate[n2] {
+	if sum > s.tsp.dueDate[n2] {
 		return false
 	}
 
@@ -322,13 +322,13 @@ func (c cons2Opt) isFeasible(s *Solution, i, j int) bool {
 		n1 = s.route[k]
 		n2 = s.route[k-1]
 
-		if s.tsp.readytime[n1] > sum {
-			sum = s.tsp.readytime[n1]
+		if s.tsp.readyTime[n1] > sum {
+			sum = s.tsp.readyTime[n1]
 		}
 
 		sum += s.tsp.matrix[n1][n2]
 
-		if sum > s.tsp.duedate[n2] {
+		if sum > s.tsp.dueDate[n2] {
 			return false
 		}
 
@@ -352,14 +352,14 @@ func (c cons2Opt) isFeasible(s *Solution, i, j int) bool {
 		n1 = s.route[i+1]
 		n2 = s.route[j+1]
 
-		if s.tsp.readytime[n1] > sum {
-			sum = s.tsp.readytime[n1]
+		if s.tsp.readyTime[n1] > sum {
+			sum = s.tsp.readyTime[n1]
 		}
 
 		sum += s.tsp.matrix[n1][n2]
 		carrying += s.tsp.demands[n1]
 
-		if sum > s.tsp.duedate[n2] {
+		if sum > s.tsp.dueDate[n2] {
 			return false
 		}
 
@@ -372,14 +372,14 @@ func (c cons2Opt) isFeasible(s *Solution, i, j int) bool {
 		n1 = s.route[k]
 		n2 = s.route[k+1]
 
-		if s.tsp.readytime[n1] > sum {
-			sum = s.tsp.readytime[n1]
+		if s.tsp.readyTime[n1] > sum {
+			sum = s.tsp.readyTime[n1]
 		}
 
 		sum += s.tsp.matrix[n1][n2]
 		carrying += s.tsp.demands[n1]
 
-		if sum > s.tsp.duedate[n2] {
+		if sum > s.tsp.dueDate[n2] {
 			return false
 		}
 		/* if (sum <= this->inc[i])
@@ -392,8 +392,8 @@ func (c cons2Opt) isFeasible(s *Solution, i, j int) bool {
 		}
 	}
 
-	if s.tsp.readytime[s.route[len(s.route)-2]] > sum {
-		sum = s.tsp.readytime[s.route[len(s.route)-2]]
+	if s.tsp.readyTime[s.route[len(s.route)-2]] > sum {
+		sum = s.tsp.readyTime[s.route[len(s.route)-2]]
 	}
 
 	return true
@@ -402,23 +402,23 @@ func (c cons2Opt) isFeasible(s *Solution, i, j int) bool {
 func (c *cons2Opt) calcGlobals(s *Solution) {
 	var n1, n2 int
 
-	sum := s.tsp.travelled
+	sum := s.tsp.traveled
 	carrying := s.tsp.carrying
 
 	c.precedence = make(map[int]int)
 
 	for i := 0; i < len(s.route)-1; i++ {
-		// travelled
+		// traveled
 		n1 = s.route[i]
 		n2 = s.route[i+1]
 
-		if s.tsp.readytime[n1] > sum {
-			sum = s.tsp.readytime[n1]
+		if s.tsp.readyTime[n1] > sum {
+			sum = s.tsp.readyTime[n1]
 		}
 
 		sum += s.tsp.matrix[n1][n2]
 
-		c.travelled[i+1] = sum
+		c.traveled[i+1] = sum
 
 		// precedence
 		if n, ok := s.tsp.precedence[n1]; ok {
@@ -453,8 +453,8 @@ func (cons2Opt) isProfitable(s *Solution, i, j int, spans ...int) bool {
 	n1 = s.route[i]
 	n2 = s.route[j]
 
-	if s.tsp.readytime[n1] > sum {
-		sum = s.tsp.readytime[n1]
+	if s.tsp.readyTime[n1] > sum {
+		sum = s.tsp.readyTime[n1]
 	}
 
 	sum += s.tsp.matrix[n1][n2]
@@ -463,8 +463,8 @@ func (cons2Opt) isProfitable(s *Solution, i, j int, spans ...int) bool {
 		n1 = s.route[k]
 		n2 = s.route[k-1]
 
-		if s.tsp.readytime[n1] > sum {
-			sum = s.tsp.readytime[n1]
+		if s.tsp.readyTime[n1] > sum {
+			sum = s.tsp.readyTime[n1]
 		}
 
 		sum += s.tsp.matrix[n1][n2]
@@ -473,8 +473,8 @@ func (cons2Opt) isProfitable(s *Solution, i, j int, spans ...int) bool {
 	n1 = s.route[i+1]
 	n2 = s.route[j+1]
 
-	if s.tsp.readytime[n1] > sum {
-		sum = s.tsp.readytime[n1]
+	if s.tsp.readyTime[n1] > sum {
+		sum = s.tsp.readyTime[n1]
 	}
 
 	sum += s.tsp.matrix[n1][n2]

@@ -35,8 +35,8 @@ func NewCons(opts config.Construction) *Construction {
 		strategy = random{}
 	case "greedy":
 		strategy = greedy{}
-	case "sortByDuedate":
-		strategy = sortByDuedate{}
+	case "sortBydueDate":
+		strategy = sortBydueDate{}
 	case "sortByTW":
 		strategy = sortByTW{}
 	default:
@@ -197,7 +197,7 @@ func (*Construction) disturb(s *Solution, level int) *Solution {
 // Penalty is sum of all differences between the time to reach each customer
 // and its due date
 func (c Construction) Penalty(s *Solution) (penalty int) {
-	traveled := s.tsp.travelled
+	traveled := s.tsp.traveled
 	carrying := s.tsp.carrying
 	hasNode := false
 
@@ -212,8 +212,8 @@ func (c Construction) Penalty(s *Solution) (penalty int) {
 		carrying += s.tsp.demands[s.route[i-1]]
 
 		// wait to ready to time
-		if traveled < s.tsp.readytime[s.route[i]] {
-			traveled = s.tsp.readytime[s.route[i]]
+		if traveled < s.tsp.readyTime[s.route[i]] {
+			traveled = s.tsp.readyTime[s.route[i]]
 		}
 
 		if carrying > s.tsp.capacity {
@@ -237,9 +237,9 @@ func (c Construction) Penalty(s *Solution) (penalty int) {
 			}
 		}
 
-		if s.tsp.duedate[s.route[i]] != 0 && s.tsp.duedate[s.route[i]] < traveled ||
-			s.tsp.readytime[s.route[i]] > traveled {
-			p_tw = p_tw + traveled - s.tsp.duedate[s.route[i]]
+		if s.tsp.dueDate[s.route[i]] != 0 && s.tsp.dueDate[s.route[i]] < traveled ||
+			s.tsp.readyTime[s.route[i]] > traveled {
+			p_tw = p_tw + traveled - s.tsp.dueDate[s.route[i]]
 		}
 	}
 

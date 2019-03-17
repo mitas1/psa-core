@@ -1,5 +1,6 @@
 vns:
-  iterMax: 2
+  iterMax: 3
+  maxTime: 1
 construction:
   strategy: random
   levelMax: 10
