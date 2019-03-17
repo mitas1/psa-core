@@ -49,15 +49,6 @@ type local2Opt struct {
 	objective
 }
 
-type objective interface {
-	get(*Solution) int
-	isProfitable(s *Solution, i, j int, spans ...int) bool
-}
-
-type spanTime struct{}
-type totalTime struct{}
-type totalTimeA struct{}
-
 func (spanTime) get(s *Solution) int {
 	traveled := 0
 	for i := 0; i < len(s.route)-1; i++ {
