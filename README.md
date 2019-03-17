@@ -52,8 +52,8 @@ Example config:
 
 ```yaml
 common:
-  iterMax: 3
-  maxTime: 1
+  iterMax: 2
+  maxTime: 100
 construction:
   strategy: random
   levelMax: 10
@@ -65,9 +65,7 @@ optimization:
   objective: span
   gvns:
     iterMax: 4
-    levelMax: 50
-
-
+    levelMax: 40
 ```
 
 # Benchmarks
