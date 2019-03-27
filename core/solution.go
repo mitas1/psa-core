@@ -35,6 +35,11 @@ func NewSolution(tsp *PDPTW, route []int) Solution {
 	return s
 }
 
+// GetRoute returns array of calculated route
+func (s *Solution) GetRoute() []int {
+	return s.route
+}
+
 func (s *Solution) strings() []string {
 	return utils.MapIntToStr(s.route, func(x int) string {
 		return fmt.Sprintf("%d", x)
@@ -149,28 +154,28 @@ func (s *Solution) change(i, j int) {
 	s.route[i], s.route[j] = s.route[j], s.route[i]
 }
 
-func (s *Solution) HasNode(node int) bool {
+func (s *Solution) hasNode(node int) bool {
 	if val, _ := s.nodes[node]; val {
 		return true
 	}
 	return false
 }
 
-func (s *Solution) AddNode(node int) {
+func (s *Solution) addNode(node int) {
 	s.route = append(s.route, node)
 	s.nodes[node] = true
 }
 
-func (s *Solution) RemoveNode(node int) {
+func (s *Solution) removeNode(node int) {
 	s.route = s.route[:len(s.route)-1]
 	s.nodes[node] = false
 }
 
-func (s *Solution) GetNode(index int) int {
+func (s *Solution) getNode(index int) int {
 	return s.route[index]
 }
 
-func (s *Solution) GetCurrent() int {
+func (s *Solution) getCurrent() int {
 	return s.route[len(s.route)-1]
 }
 

@@ -78,20 +78,20 @@ type greedy struct{}
 func (greedy) getSolution(tsp *PDPTW) *Solution {
 	best := NewSolution(tsp, []int{0})
 	for i := 0; i < tsp.numNodes-1; i++ {
-		current := best.GetNode(i)
+		current := best.getNode(i)
 		minIndex := 0
 		var min = math.MaxInt64
 
 		for index, value := range tsp.matrix[current] {
-			if !best.HasNode(index) && value < min {
+			if !best.hasNode(index) && value < min {
 				min = value
 				minIndex = index
 			}
 		}
 
-		best.AddNode(minIndex)
+		best.addNode(minIndex)
 	}
-	best.AddNode(0)
+	best.addNode(0)
 	return &best
 }
 
