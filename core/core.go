@@ -17,14 +17,14 @@ type result struct {
 	err      error
 }
 
-type core struct {
+type Core struct {
 	common       config.Common
 	cons         *Construction
 	optimization optimization
 	objective    objective
 }
 
-func NewCore(c *config.Config) core {
+func NewCore(c *config.Config) Core {
 	cons := NewCons(c.Construction)
 
 	objective := NewObjective(c.Optimization)
@@ -36,11 +36,11 @@ func NewCore(c *config.Config) core {
 	} else {
 		optimization = NewSA(objective)
 	}
-	return core{cons: cons, optimization: optimization, objective: objective, common: c.Common}
+	return Core{cons: cons, optimization: optimization, objective: objective, common: c.Common}
 }
 
 // Process PDPTW instance
-func (c core) Process(tsp *PDPTW) (*Solution, error) {
+func (c Core) Process(tsp *PDPTW) (*Solution, error) {
 	iterationMax := c.common.IterMax
 	iteration := 0
 
