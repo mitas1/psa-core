@@ -24,7 +24,7 @@ type Core struct {
 	objective    objective
 }
 
-func NewCore(c *config.Config) Core {
+func NewCore(c *config.Config) *Core {
 	cons := NewCons(c.Construction)
 
 	objective := NewObjective(c.Optimization)
@@ -36,7 +36,7 @@ func NewCore(c *config.Config) Core {
 	} else {
 		optimization = NewSA(objective)
 	}
-	return Core{cons: cons, optimization: optimization, objective: objective, common: c.Common}
+	return &Core{cons: cons, optimization: optimization, objective: objective, common: c.Common}
 }
 
 // Process PDPTW instance
