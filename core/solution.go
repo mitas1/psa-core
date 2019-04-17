@@ -94,10 +94,43 @@ func (s *Solution) IsFeasible() bool {
 	i := len(s.route) - 1
 
 	if carrying+s.tsp.demands[s.route[i]] != 0 {
-		log.Print(carrying + s.tsp.demands[s.route[i]])
-		// log.Printf("FUK %v", carrying)
+		return false
 	}
 
+	return true
+}
+
+func (s *Solution) isFeasibleEdge(i, j int, sum, carrying *int) bool {
+	n1 := s.route[i]
+	n2 := s.route[j]
+
+	if s.tsp.readyTime[n1] > *sum {
+		*sum = s.tsp.readyTime[n1]
+	}
+
+	*sum += s.tsp.matrix[n1][n2]
+	*carrying += s.tsp.demands[n2]
+
+	if *sum > s.tsp.dueDate[n2] || *carrying > s.tsp.capacity {
+		return false
+	}
+	return true
+}
+
+func (s *Solution) isFeasibleRange(start, end int, sum, carrying *int) bool {
+	var n1, n2 int
+	for i := start; i < end; i++ {
+		n1 = s.route[i]
+		n2 = s.route[i+1]
+		if s.tsp.readyTime[n1] > *sum {
+			*sum = s.tsp.readyTime[n1]
+		}
+		*sum += s.tsp.matrix[n1][n2]
+		*carrying += s.tsp.demands[n2]
+		if *sum > s.tsp.dueDate[n2] || *carrying > s.tsp.capacity {
+			return false
+		}
+	}
 	return true
 }
 
@@ -210,12 +243,12 @@ func (s Solution) Copy() *Solution {
 }
 
 func (s Solution) disturb(level int) (x *Solution) {
-	for j := 0; j < level; j++ {
+	x = s.Copy()
 
+	for j := 0; j < level; j++ {
 		n1 := utils.Random(0, len(s.route)-2)
 		n2 := utils.Random(n1+2, len(s.route))
-
-		x = s.kExchange(n1, n2)
+		x = x.kExchange(n1, n2)
 	}
 	return x
 }
@@ -227,8 +260,8 @@ func (s *Solution) kExchange(iaux, jaux int) *Solution {
 	start := iaux + 1 // start = n1 +1
 	end := jaux       // end = n3
 
-	x := s.Copy()
 	j := 0
+	x := s.Copy()
 
 	// median
 	median := (end-start+1)/2 + start - 1
