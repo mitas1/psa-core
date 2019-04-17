@@ -35,13 +35,28 @@ type Common struct {
 type Optimization struct {
 	Objective string
 	Asymetric bool
-	GVNS      GVNS
+	VNS       VNS
+	SA        SA
 }
 
-type GVNS struct {
-	IterMax  int
-	LevelMax int
+type VNS struct {
+	IterMax     int
+	LevelMax    int
+	LocalSearch LocalSearch
 }
+
+type SA struct {
+	IterMax     float64
+	LocalSearch LocalSearch
+}
+
+type LocalSearch string
+
+const (
+	Const2Opt LocalSearch = "2opt"
+	Shifting  LocalSearch = "shifting"
+	VND       LocalSearch = "vnd"
+)
 
 // LoadConfig loads configuration file
 func (c *Config) LoadConfig(conf string) (err error) {
