@@ -1,5 +1,5 @@
 common:
-  iterMax: 2
+  iterMax: 4
   maxTime: 100
 construction:
   strategy: random
@@ -10,6 +10,7 @@ construction:
     capacity: 1
 optimization:
   objective: span
-  gvns:
-    iterMax: 4
-    levelMax: 40
+  vns:
+    iterMax: 10
+    levelMax: 50
+    localSearch: 2opt
