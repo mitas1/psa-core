@@ -143,6 +143,10 @@ func ReadFromFile(_path string, name string) *PDPTW {
 	return &tsp
 }
 
+func (tsp *PDPTW) NumberOfTasks() int {
+	return tsp.numNodes / 2
+}
+
 func (tsp *PDPTW) preprocess() {
 	tsp.arcs = make(map[int]map[int]bool)
 	for i, _ := range tsp.matrix {

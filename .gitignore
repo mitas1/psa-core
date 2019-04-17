@@ -1,3 +1,4 @@
 _solutions/
-check_solution
+*.log
 psa-core
+vendor/

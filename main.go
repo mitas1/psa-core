@@ -3,101 +3,128 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
+	"path"
 	"time"
 
-	"github.com/mitas1/psa-core/config"
+	_config "github.com/mitas1/psa-core/config"
 	"github.com/mitas1/psa-core/core"
-	logging "github.com/op/go-logging"
+	"github.com/mitas1/psa-core/logging"
 	"github.com/spf13/pflag"
 )
 
-const SOLUTION_PATH = "_solutions"
-const LOGGER_FORMAT = `%{color}%{time:2006/02/01-15:04:05.000} %{shortpkg}: %{shortfile} %{level:.4s} %{id:03x}%{color:reset} %{message}`
+var (
+	log = logging.GetLogger()
+)
 
-var logger = logging.MustGetLogger("main")
+const (
+	SOLUTION_PATH = "_solutions"
+)
 
-func parseFlags() (config *string) {
+func parseFlags() (config, logFile, instanceName, instancePath *string) {
 	config = pflag.StringP(
 		"config",
 		"c",
 		"config.yaml",
 		"Path to a config file.",
 	)
+	logFile = pflag.StringP(
+		"logfile",
+		"f",
+		"psa-core.log",
+		"Path to a log file.",
+	)
+	instanceName = pflag.StringP(
+		"instance-path",
+		"i",
+		"",
+		"Path to specific instance file.",
+	)
+	instancePath = pflag.StringP(
+		"instances-path",
+		"p",
+		"_instances/wan-rong-jih",
+		"Path to instances dir.",
+	)
 	pflag.Parse()
 	return
 }
 
-func runAll(instancesPath, solutionsPath string, config *config.Config) {
-	files, err := ioutil.ReadDir(instancesPath)
+type solver struct {
+	core *core.Core
+}
+
+func (s solver) solveInstance(_path, name string) (latexOut string) {
+	instancePath := path.Join(_path, name)
+	file, err := os.Open(instancePath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	res := ""
-
-	vns := core.NewCore(config)
-
-	for _, file := range files {
-		log.Printf("Solving: %s", file.Name())
-		tsp := core.ReadFromFile(instancesPath, file.Name())
-		start := time.Now()
-		s, err := vns.Process(tsp)
-		if err != nil {
-			log.Print(err)
-		}
-		if s != nil {
-			duration := time.Since(start)
-			line := fmt.Sprintf("%v	&	%v	&	%v	&	%.4f	%v\n", file.Name(), s.MakeSpan(),
-				s.TotalDistance(), duration.Seconds(), s.Check())
-			res += line
-			fmt.Print(line)
-			s.WriteToFile(solutionsPath, file.Name())
-		}
+	fileInfo, err := file.Stat()
+	if err != nil {
+		log.Fatal(err)
 	}
-	log.Print(res)
+
+	if fileInfo.IsDir() {
+		log.Warningf("Skipping directory: %v", name)
+		return
+	}
+
+	pdptw := core.ReadFromFile(_path, name)
+
+	start := time.Now()
+	log.Infof("Solving instance: %v", name)
+	sol, err := s.core.Process(pdptw)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	duration := time.Since(start)
+
+	log.Infof(`Instance solved!
+	Name:			%v
+	Tasks:			%v
+	Objective:		%v
+	Duration:		%.4f (s)
+	Checks:			%v`, name, pdptw.NumberOfTasks(), sol.MakeSpan(), duration.Seconds(), sol.Check())
+
+	latexOut = fmt.Sprintf("%v	&	%v	&	%.4f\n", pdptw.NumberOfTasks(), sol.MakeSpan(), duration.Seconds())
+
+	return
 }
 
 func main() {
-	// Load configuration file
-	c := config.Config{}
+	config, file, instanceName, instancesPath := parseFlags()
 
-	config := parseFlags()
+	log = logging.SetupLogger(file)
 
-	err := c.LoadConfig(*config)
-	if err != nil {
-		os.Exit(1)
+	c := _config.Config{}
+
+	if err := c.LoadConfig(*config); err != nil {
+		log.Fatal(err)
 	}
 
-	// Setup logger
-	stdOutBackend := logging.NewLogBackend(os.Stdout, "", 0)
-	logging.SetBackend(logging.NewBackendFormatter(
-		stdOutBackend,
-		logging.MustStringFormatter(LOGGER_FORMAT)))
+	log = logging.SetupLogger(file)
 
-	instancesPath := ""
-	//instanceName := ""
+	var latex string
+	solver := solver{core: core.NewCore(&c)}
 
-	if instancesPath == "" {
-		instancesPath = "_instances/wan-rong-jih/psa"
+	if instanceName != nil && *instanceName != "" {
+		latex += solver.solveInstance("", *instanceName)
+	} else {
+		files, err := ioutil.ReadDir(*instancesPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, file := range files {
+			latex += solver.solveInstance(*instancesPath, file.Name())
+		}
 	}
 
-	runAll(instancesPath, SOLUTION_PATH, &c)
+	log.Infof("Well done copy paste the following into your awesome thesis")
+	fmt.Print(latex)
+
 	return
-
-	log.Printf("Solving: %s", "a.psa")
-
-	tsp := core.ReadFromFile(instancesPath, "01.psa")
-
-	fmt.Printf("%#v", tsp)
-
-	vns := core.NewCore(&c)
-
-	s, err := vns.Process(tsp)
-	if err != nil {
-		log.Print(err)
-	}
-	s.Print()
-	log.Print("done")
 }

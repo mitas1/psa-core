@@ -31,10 +31,10 @@ func NewCore(c *config.Config) *Core {
 
 	var optimization optimization
 
-	if c.Optimization.GVNS != (config.GVNS{}) {
-		optimization = NewGVNS(c.Optimization.GVNS, objective)
+	if c.Optimization.VNS != (config.VNS{}) {
+		optimization = NewVNS(c.Optimization.VNS, objective)
 	} else {
-		optimization = NewSA(objective)
+		optimization = NewSA(c.Optimization.SA, objective)
 	}
 	return &Core{cons: cons, optimization: optimization, objective: objective, common: c.Common}
 }
@@ -42,6 +42,7 @@ func NewCore(c *config.Config) *Core {
 // Process PDPTW instance
 func (c Core) Process(tsp *PDPTW) (*Solution, error) {
 	iterationMax := c.common.IterMax
+	i := 0
 	iteration := 0
 
 	// TODO: Check PDPTW instance
@@ -55,8 +56,8 @@ func (c Core) Process(tsp *PDPTW) (*Solution, error) {
 
 	channel := make(chan result)
 
-	go func() {
-		for {
+	for i < iterationMax {
+		go func() {
 			// set random seed
 			rand.Seed(time.Now().UnixNano())
 
@@ -73,20 +74,28 @@ func (c Core) Process(tsp *PDPTW) (*Solution, error) {
 
 			s = c.optimization.process(s)
 			channel <- result{solution: s, err: nil}
-		}
-	}()
+
+			s = c.optimization.process(s)
+			channel <- result{solution: s, err: nil}
+
+			s = c.optimization.process(s)
+			channel <- result{solution: s, err: nil}
+		}()
+		i++
+	}
 
 	timeout := time.After(c.common.MaxTime * time.Second)
 
-	for iteration < iterationMax*2 {
+	for iteration < iterationMax*4 {
 		iteration++
 		select {
 		case res := <-channel:
 			if res.err != nil {
 				return nil, res.err
 			}
-			if best == nil || c.objective.get(s) < c.objective.get(best) {
-				best = s
+
+			if best == nil || c.objective.get(res.solution) < c.objective.get(best) {
+				best = res.solution
 			}
 		case <-timeout:
 			if best == nil {
@@ -97,6 +106,5 @@ func (c Core) Process(tsp *PDPTW) (*Solution, error) {
 			}
 		}
 	}
-
 	return best, nil
 }
