@@ -5,9 +5,7 @@ construction and optimization phase. This repository is part of the diploma thes
 
 ## Building and running
 
-Firstly, clone this repository to `${GOPATH}/src/github.com/mitas1/pps-core`. 
-
-Then, update `config.yaml` if needed (see [Configuration](#configuration)).
+Firstly, update `config.yaml` if needed (see [Configuration](#configuration)).
 
 To build the `psa-core` type the following:
 
@@ -18,7 +16,7 @@ $ make build
 Finally, to run:
 
 ```sh
-$ make run
+$ ./psa-core
 ```
 
 To see available flags type:
@@ -33,7 +31,7 @@ This table describes available configuration options:
 
 | Name             | Description                                                             |
 | ---------------- | ----------------------------------------------------------------------- |
-| `common.iterMax`    | Maximum iteretion of the overall Algorithm                           |
+| `common.iterMax`    | Maximum iteretion of the overall algorithm                           |
 | `common.maxTime`    | Maximum execution time in seconds                                    |
 | `construction.strategy`  | Strategy used to create the first posibly unfeasible solution. Available choices are `random`, `greedy`, `sortedBydueDate` and `sortedByTW` |
 | `construction.levelMax`  | Maximum level of perturbation in constraction part               |
@@ -43,15 +41,18 @@ This table describes available configuration options:
 | `construction.penalty.capacity`    | Weight of capacity penalty                             |
 | `optimization.objective`  | Objective function in optimization phase. Available choices are `span` and `time` |
 | `optimization.asymetric`  | Whether the instance is asymetric or not                       |
-| `optimization.gvns`       | If specified GVNS is used as optimzation phase                 |
-| `optimization.gvns.levelMax`  | Maximum level of perturbation in optimization part                 |
-| `optimization.gvns.iterMax`   | Maximum iteretion in optimization part                             |
+| `optimization.vns`       | If specified VNS is used as optimzation phase                 |
+| `optimization.vns.levelMax`  | Maximum level of perturbation in optimization part                 |
+| `optimization.vns.iterMax`   | Maximum iteretion in optimization part                             |
+| `optimization.vns.localSearch` | Local search in vns applied. Available choices are `vnd`, `2opt` and `shifting` |
+| `optimization.sa` | If `optimization.vns` is not specified, simmulated annealing is applied in optimization phase. |
+| `optimization.sa.iterMax` | Maximum iteration of the annealing |
 
 Example config:
 
 ```yaml
 common:
-  iterMax: 2
+  iterMax: 4
   maxTime: 100
 construction:
   strategy: random
@@ -62,7 +63,8 @@ construction:
     capacity: 1
 optimization:
   objective: span
-  gvns:
-    iterMax: 4
-    levelMax: 40
+  vns:
+    iterMax: 10
+    levelMax: 50
+    localSearch: vnd
 ```
