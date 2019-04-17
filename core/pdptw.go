@@ -3,7 +3,6 @@ package core
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"strconv"
@@ -129,7 +128,7 @@ func ReadFromFile(_path string, name string) *PDPTW {
 					tsp.readyTime[elems[0]] = elems[2]
 					tsp.dueDate[elems[0]] = elems[3]
 				} else {
-					log.Printf("Wrong task format")
+					log.Fatal("Wrong task format")
 				}
 			}
 			i++

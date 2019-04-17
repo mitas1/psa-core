@@ -128,7 +128,6 @@ func (c *Construction) shifting(s *Solution, direction Direction, setType SetTyp
 
 		improvement = false
 
-		// TODO: Rewrite needed, merge this code
 		if direction == BACKWARD {
 			for i := npos - 1; i > 0; i-- {
 				if !s.tsp.arcs[n][s.route[i]] {
