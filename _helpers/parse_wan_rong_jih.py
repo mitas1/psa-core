@@ -11,7 +11,7 @@
 import re
 import os
 
-INSTANCES_PATH = "../_instances/pdptw/"
+INSTANCES_PATH = "./_instances/wan-rong-jih"
 
 
 def distance(p1, p2):

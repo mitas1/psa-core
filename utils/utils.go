@@ -1,6 +1,8 @@
 package utils
 
-import "math/rand"
+import (
+	"math/rand"
+)
 
 // Map function to array of ints
 func Map(vs []string, f func(string) int) []int {

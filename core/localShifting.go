@@ -16,7 +16,7 @@ type localshifting struct {
 }
 
 func (local localshifting) process(x *Solution) {
-	local.calcGlobals(x)
+	local.setGlobals(x.calcGlobals())
 
 	for k := 0; k < iterMax; k++ {
 		i := utils.Random(1, len(x.route)-1)
@@ -33,53 +33,10 @@ func (local localshifting) process(x *Solution) {
 	return
 }
 
-func (c *localshifting) calcGlobals(s *Solution) {
-	var n1, n2 int
-
-	traveled := s.tsp.traveled
-	carrying := s.tsp.carrying
-
-	c.traveled = make([]int, s.tsp.numNodes)
-	c.precedence = make(map[int]int)
-	c.carrying = make(map[int]int)
-
-	for i := 0; i < len(s.route)-1; i++ {
-		// traveled
-		n1 = s.route[i]
-		n2 = s.route[i+1]
-
-		if s.tsp.readyTime[n1] > traveled {
-			traveled = s.tsp.readyTime[n1]
-		}
-
-		traveled += s.tsp.matrix[n1][n2]
-
-		c.traveled[i+1] = traveled
-
-		// precedence
-		if n, ok := s.tsp.precedence[n1]; ok {
-			index := utils.IndexOf(n, s.route)
-			c.precedence[index] = i
-			c.precedence[i] = index
-		} else if _, ok := c.precedence[i]; !ok {
-			// ignore precedence of vertex
-			c.precedence[i] = -1
-		}
-
-		carrying += s.tsp.demands[n1]
-
-		c.carrying[i] = carrying
-	}
-
-	i := len(s.route) - 1
-
-	n := s.tsp.precedence[s.route[i]]
-
-	index := utils.IndexOf(n, s.route)
-	c.precedence[i] = index
-	c.precedence[index] = i
-
-	return
+func (c *localshifting) setGlobals(traveled []int, carrying, precedence map[int]int) {
+	c.traveled = traveled
+	c.precedence = precedence
+	c.carrying = carrying
 }
 
 func (c *localshifting) updateGlobals(s *Solution, from int) {

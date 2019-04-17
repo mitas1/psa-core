@@ -11,6 +11,6 @@ construction:
 optimization:
   objective: span
   vns:
-    iterMax: 10
-    levelMax: 50
-    localSearch: 2opt
+    iterMax: 2
+    levelMax: 30
+    localSearch: vnd

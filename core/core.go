@@ -67,17 +67,6 @@ func (c Core) Process(tsp *PDPTW) (*Solution, error) {
 
 			// Try to improve
 
-			// Simmulated annealing with local 2 optimization
-			// sa := SA{}
-
-			// s = sa.Process(s)
-
-			s = c.optimization.process(s)
-			channel <- result{solution: s, err: nil}
-
-			s = c.optimization.process(s)
-			channel <- result{solution: s, err: nil}
-
 			s = c.optimization.process(s)
 			channel <- result{solution: s, err: nil}
 		}()
@@ -86,7 +75,7 @@ func (c Core) Process(tsp *PDPTW) (*Solution, error) {
 
 	timeout := time.After(c.common.MaxTime * time.Second)
 
-	for iteration < iterationMax*4 {
+	for iteration < iterationMax*2 {
 		iteration++
 		select {
 		case res := <-channel:

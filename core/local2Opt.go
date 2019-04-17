@@ -2,8 +2,6 @@ package core
 
 import (
 	"math/rand"
-
-	"github.com/mitas1/psa-core/utils"
 )
 
 // constrained 2 opt
@@ -26,7 +24,7 @@ func (c local2Opt) process(s *Solution) {
 		set[i] = i
 	}
 
-	c.calcGlobals(s)
+	c.setGlobals(s.calcGlobals())
 
 	// outerloop
 	for pointer > 0 {
@@ -112,30 +110,13 @@ func (c local2Opt) exchangeGlobalUpdate(s *Solution, iaux, jaux int) {
 
 // exchange (i,i+1), (j,j+1) ===> (i,j), (i+1,j+1)
 func (c local2Opt) isFeasible(s *Solution, i, j int) bool {
-
+	var n1, n2 int
 	sum := c.traveled[i]
-
 	carrying := c.carrying[i]
 
-	// i -> j
-	n1 := s.route[i]
-	n2 := s.route[j]
-
-	if s.tsp.readyTime[n1] > sum {
-		sum = s.tsp.readyTime[n1]
-	}
-
-	sum += s.tsp.matrix[n1][n2]
-
-	if sum > s.tsp.dueDate[n2] {
+	if !s.isFeasibleEdge(i, j, &sum, &carrying) {
 		return false
 	}
-
-	if carrying > s.tsp.capacity {
-		return false
-	}
-
-	// j -> i + 1
 
 	for k := j; k > i+1; k-- {
 
@@ -155,113 +136,33 @@ func (c local2Opt) isFeasible(s *Solution, i, j int) bool {
 		// precendence
 
 		if c.precedence[k] > i && c.precedence[k] < j {
-			// log.Printf("EXCHANGE: i=%v j=%v k=%v %v| %v", i, j, k, c.precedence[k], c.precedence)
 			return false
 		}
 
 		// capacity
 
-		carrying += s.tsp.demands[n1]
+		carrying += s.tsp.demands[n2]
 
 		if carrying > s.tsp.capacity {
 			return false
 		}
 	}
-	// i+1 -> j+1
+
 	if j+1 < len(s.route) {
-		n1 = s.route[i+1]
-		n2 = s.route[j+1]
-
-		if s.tsp.readyTime[n1] > sum {
-			sum = s.tsp.readyTime[n1]
-		}
-
-		sum += s.tsp.matrix[n1][n2]
-		carrying += s.tsp.demands[n1]
-
-		if sum > s.tsp.dueDate[n2] {
-			return false
-		}
-
-		if carrying > s.tsp.capacity {
+		if !s.isFeasibleEdge(i+1, j+1, &sum, &carrying) {
 			return false
 		}
 	}
 
-	// j+1 ->
-
-	for k := j + 1; k < len(s.route)-1; k++ {
-		n1 = s.route[k]
-		n2 = s.route[k+1]
-
-		if s.tsp.readyTime[n1] > sum {
-			sum = s.tsp.readyTime[n1]
-		}
-
-		sum += s.tsp.matrix[n1][n2]
-		carrying += s.tsp.demands[n1]
-
-		if sum > s.tsp.dueDate[n2] {
-			return false
-		}
-
-		if carrying > s.tsp.capacity {
-			return false
-		}
-	}
-
-	if s.tsp.readyTime[s.route[len(s.route)-2]] > sum {
-		sum = s.tsp.readyTime[s.route[len(s.route)-2]]
+	if !s.isFeasibleRange(j+1, len(s.route)-1, &sum, &carrying) {
+		return false
 	}
 
 	return true
 }
 
-func (c *local2Opt) calcGlobals(s *Solution) {
-	var n1, n2 int
-
-	sum := s.tsp.traveled
-	carrying := s.tsp.carrying
-
-	c.traveled = make([]int, s.tsp.numNodes)
-	c.precedence = make(map[int]int)
-	c.carrying = make(map[int]int)
-
-	for i := 0; i < len(s.route)-1; i++ {
-		// traveled
-		n1 = s.route[i]
-		n2 = s.route[i+1]
-
-		if s.tsp.readyTime[n1] > sum {
-			sum = s.tsp.readyTime[n1]
-		}
-
-		sum += s.tsp.matrix[n1][n2]
-
-		c.traveled[i+1] = sum
-
-		// precedence
-		if n, ok := s.tsp.precedence[n1]; ok {
-			index := utils.IndexOf(n, s.route)
-			c.precedence[index] = i
-			c.precedence[i] = index
-		} else if _, ok := c.precedence[i]; !ok {
-			// ignore precedence of vertex
-			c.precedence[i] = -1
-		}
-
-		carrying += s.tsp.demands[n1]
-
-		c.carrying[i] = carrying
-	}
-
-	i := len(s.route) - 1
-
-	n := s.tsp.precedence[s.route[i]]
-
-	index := utils.IndexOf(n, s.route)
-	c.precedence[i] = index
-	c.precedence[index] = i
-
-	return
+func (c *local2Opt) setGlobals(traveled []int, carrying, precedence map[int]int) {
+	c.traveled = traveled
+	c.precedence = precedence
+	c.carrying = carrying
 }

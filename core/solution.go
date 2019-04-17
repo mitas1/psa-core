@@ -3,11 +3,11 @@ package core
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"strings"
 
+	"github.com/mitas1/psa-core/logging"
 	"github.com/mitas1/psa-core/utils"
 )
 
@@ -277,19 +277,70 @@ func (s *Solution) kExchange(iaux, jaux int) *Solution {
 	return s
 }
 
+func (s *Solution) calcGlobals() (traveled []int, carrying, precedence map[int]int) {
+	var n1, n2 int
+
+	_traveled := s.tsp.traveled
+	_carrying := s.tsp.carrying
+
+	traveled = make([]int, s.tsp.numNodes)
+	carrying = make(map[int]int)
+	precedence = make(map[int]int)
+
+	for i := 0; i < len(s.route)-1; i++ {
+		// traveled
+		n1 = s.route[i]
+		n2 = s.route[i+1]
+
+		if s.tsp.readyTime[n1] > _traveled {
+			_traveled = s.tsp.readyTime[n1]
+		}
+
+		_traveled += s.tsp.matrix[n1][n2]
+
+		traveled[i+1] = _traveled
+
+		// precedence
+		if n, ok := s.tsp.precedence[n1]; ok {
+			index := utils.IndexOf(n, s.route)
+			precedence[index] = i
+			precedence[i] = index
+		} else if _, ok := precedence[i]; !ok {
+			// ignore precedence of vertex
+			precedence[i] = -1
+		}
+
+		_carrying += s.tsp.demands[n1]
+
+		carrying[i] = _carrying
+	}
+
+	i := len(s.route) - 1
+
+	n := s.tsp.precedence[s.route[i]]
+
+	index := utils.IndexOf(n, s.route)
+	precedence[i] = index
+	precedence[index] = i
+
+	return
+}
+
 //// ------- TESTING -----------------------------------------------------------
+
+var (
+	log = logging.GetLogger()
+)
 
 func (s *Solution) Check() bool {
 
 	if s.tsp.startNode != s.route[0] {
-		log.Print("Wrong startnode!")
-		log.Print(s.route)
+		log.Errorf("%v: %v", "Wrong startnode!", s.route)
 		return false
 	}
 
 	if s.tsp.numNodes != len(s.route) {
-		log.Print("numNodes are not equal to route")
-		log.Print(s.route)
+		log.Errorf("%v: %v", "numNodes are not equal to route", s.route)
 		return false
 	}
 
@@ -300,100 +351,14 @@ func (s *Solution) Check() bool {
 	}
 
 	if len(set) != len(s.route) {
-		log.Print("Some nodes are duplicated")
-		log.Print(s.route)
+		log.Errorf("%v: %v", "Some nodes are duplicated", s.route)
 		return false
 	}
 
 	if !s.IsFeasible() {
-		log.Print("Solution is not FEASIBLE!")
-		log.Print(s.route)
+		log.Errorf("%v: %v", "Solution is not FEASIBLE!", s.route)
 		return false
 	}
 
-	return true
-}
-
-// IsFeasible checks if solution is feasible
-func (s *Solution) IsFeasiblePrecendence() bool {
-	hasNode := false
-	traveled := 0
-	carrying := 0
-
-	for i := 1; i < s.tsp.numNodes; i++ {
-		hasNode = false
-		traveled += s.tsp.matrix[s.route[i-1]][s.route[i]]
-		carrying += s.tsp.demands[s.route[i-1]]
-
-		//log.Printf("%v - %v - %v", s.route[i-1], s.tsp.demands[s.route[i-1]], carrying)
-
-		// wait to ready to time
-		if traveled < s.tsp.readyTime[s.route[i]] {
-			traveled = s.tsp.readyTime[s.route[i]]
-		}
-
-		if value, ok := s.tsp.precedence[s.route[i]]; ok {
-			for j := i; j > 0; j-- {
-				if value == s.route[j] {
-					hasNode = true
-					break
-				}
-			}
-			if !hasNode {
-				// log.Printf("%v - %v", s.route[i], i)
-				// log.Print("PRECEDENCE OVERFLOW")
-				return false
-			}
-		}
-	}
-
-	// log.Printf("%v - %v - %v", carrying)
-	return true
-}
-
-// IsFeasible checks if solution is feasible
-func (s *Solution) IsFeasibleLog() bool {
-	hasNode := false
-	traveled := 0
-	carrying := 0
-
-	for i := 1; i < s.tsp.numNodes; i++ {
-		hasNode = false
-		traveled += s.tsp.matrix[s.route[i-1]][s.route[i]]
-		carrying += s.tsp.demands[s.route[i-1]]
-
-		//log.Printf("%v - %v - %v", s.route[i-1], s.tsp.demands[s.route[i-1]], carrying)
-
-		// wait to ready to time
-		if traveled < s.tsp.readyTime[s.route[i]] {
-			traveled = s.tsp.readyTime[s.route[i]]
-		}
-
-		if carrying > s.tsp.capacity {
-			log.Print("CAPACITY OVERFLOW")
-			return false
-		}
-
-		if value, ok := s.tsp.precedence[s.route[i]]; ok {
-			for j := i; j > 0; j-- {
-				if value == s.route[j] {
-					hasNode = true
-					break
-				}
-			}
-			if !hasNode {
-				// log.Printf("%v - %v", s.route[i], i)
-				log.Print("PRECEDENCE OVERFLOW")
-				return false
-			}
-		}
-
-		if s.tsp.dueDate[s.route[i]] != 0 && s.tsp.dueDate[s.route[i]] < traveled {
-			log.Printf("%v TIME WINDOW OVERFLOW", i)
-			return false
-		}
-	}
-
-	// log.Printf("%v - %v - %v", carrying)
 	return true
 }
