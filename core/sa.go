@@ -56,5 +56,5 @@ func (local *SA) probability(cost, newCost, T float64) float64 {
 		return 1
 	}
 
-	return math.Exp(-(newCost - cost) / T)
+	return math.Exp((cost - newCost) / T)
 }
