@@ -47,6 +47,7 @@ This table describes available configuration options:
 | `optimization.vns.localSearch` | Local search in vns applied. Available choices are `vnd`, `2opt` and `shifting` |
 | `optimization.sa` | If `optimization.vns` is not specified, simmulated annealing is applied in optimization phase. |
 | `optimization.sa.iterMax` | Maximum iteration of the annealing |
+| `optimization.sa.localSearch` | Local search applied. Available choices are `vnd`, `2opt` and `shifting` |
 
 Example config:
 
