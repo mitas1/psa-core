@@ -21,7 +21,7 @@ const (
 	SOLUTION_PATH = "_solutions"
 )
 
-func parseFlags() (config, logFile, instanceName, instancePath *string) {
+func parseFlags() (config, logFile, instanceName, instancePath *string, iterations *int) {
 	config = pflag.StringP(
 		"config",
 		"c",
@@ -46,6 +46,12 @@ func parseFlags() (config, logFile, instanceName, instancePath *string) {
 		"_instances/wan-rong-jih",
 		"Path to instances dir.",
 	)
+	iterations = pflag.IntP(
+		"iterations",
+		"t",
+		1,
+		"Number of iterations.",
+	)
 	pflag.Parse()
 	return
 }
@@ -54,7 +60,7 @@ type solver struct {
 	core *core.Core
 }
 
-func (s solver) solveInstance(_path, name string) (latexOut string) {
+func (s solver) solveInstance(_path, name string, maxIter int) (latexOut string) {
 	instancePath := path.Join(_path, name)
 	file, err := os.Open(instancePath)
 	if err != nil {
@@ -73,30 +79,38 @@ func (s solver) solveInstance(_path, name string) (latexOut string) {
 
 	pdptw := core.ReadFromFile(_path, name)
 
-	start := time.Now()
-	log.Infof("Solving instance: %v", name)
-	sol, err := s.core.Process(pdptw)
-	if err != nil {
-		log.Error(err)
-		return
+	var totalDuration float64
+	var totalObjective int
+
+	for iteration := 1; iteration < maxIter+1; iteration++ {
+		log.Infof("Solving instance: %v, iteration: %d", name, iteration)
+		start := time.Now()
+		sol, err := s.core.Process(pdptw)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		duration := time.Since(start)
+		log.Infof(`Instance solved!
+		Name:			%v
+		Tasks:			%v
+		Objective:		%v
+		Duration:		%.4f (s)
+		Checks:			%v`, name, pdptw.NumberOfTasks(), sol.MakeSpan(),
+			duration.Seconds(), sol.Check())
+
+		totalObjective += sol.MakeSpan()
+		totalDuration += duration.Seconds()
 	}
 
-	duration := time.Since(start)
-
-	log.Infof(`Instance solved!
-	Name:			%v
-	Tasks:			%v
-	Objective:		%v
-	Duration:		%.4f (s)
-	Checks:			%v`, name, pdptw.NumberOfTasks(), sol.MakeSpan(), duration.Seconds(), sol.Check())
-
-	latexOut = fmt.Sprintf("%v	&	%v	&	%.4f\n", pdptw.NumberOfTasks(), sol.MakeSpan(), duration.Seconds())
+	latexOut = fmt.Sprintf("%v	&	%v	&	%.4f\n", pdptw.NumberOfTasks(),
+		totalObjective / maxIter, totalDuration / float64(maxIter))
 
 	return
 }
 
 func main() {
-	config, file, instanceName, instancesPath := parseFlags()
+	config, file, instanceName, instancesPath, iterations := parseFlags()
 
 	log = logging.SetupLogger(file)
 
@@ -109,17 +123,18 @@ func main() {
 	log = logging.SetupLogger(file)
 
 	var latex string
+
 	solver := solver{core: core.NewCore(&c)}
 
 	if instanceName != nil && *instanceName != "" {
-		latex += solver.solveInstance("", *instanceName)
+		latex += solver.solveInstance("", *instanceName, *iterations)
 	} else {
 		files, err := ioutil.ReadDir(*instancesPath)
 		if err != nil {
 			log.Fatal(err)
 		}
 		for _, file := range files {
-			latex += solver.solveInstance(*instancesPath, file.Name())
+			latex += solver.solveInstance(*instancesPath, file.Name(), *iterations)
 		}
 	}
 

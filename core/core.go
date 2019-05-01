@@ -45,13 +45,10 @@ func (c Core) Process(tsp *PDPTW) (*Solution, error) {
 	i := 0
 	iteration := 0
 
-	// TODO: Check PDPTW instance
-
 	// Preprocess incompatible arcs
 	tsp.preprocess()
 
 	// init structs
-
 	var best, s *Solution
 
 	channel := make(chan result)
